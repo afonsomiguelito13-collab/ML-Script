@@ -1,7 +1,10 @@
---[[ part3.lua — Loops + Final | Userspin45 ]]
+--[[ parte3.lua — Loops + Final | Userspin45 ]]
 
 local U = getgenv().Userspin45
-if not U or not U.Fluent then warn("[Userspin45] part1/part2 não carregaram!") return end
+if not U or not U.Fluent or not U.Window then
+    warn("[Userspin45] parte1/parte2 não carregaram!")
+    return
+end
 
 local Config = U.Config
 local Fluent = U.Fluent
@@ -18,7 +21,7 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    local last
+    local last = nil
     while true do
         if Config.SilentKill and not Config.SilentKill2 then
             pcall(function()
@@ -32,8 +35,7 @@ task.spawn(function()
                     U.currentTarget = U.getNearest() or U.getRandom()
                     if U.currentTarget then U.tp(U.currentTarget) last = U.currentTarget end
                 else
-                    U.tp(U.currentTarget)
-                    last = U.currentTarget
+                    U.tp(U.currentTarget) last = U.currentTarget
                 end
                 U.doPunch()
                 U.setAnim(Config.AnimSpeed)
@@ -48,7 +50,7 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    local last
+    local last = nil
     while true do
         if Config.SilentKill2 or Config.KillAura then
             pcall(function()
@@ -70,19 +72,14 @@ task.spawn(function()
                             if dist < d then d, n = dist, p end
                         end
                     end
-                    if n then
-                        U.currentTarget = n
-                        last = n
-                        U.tp(n)
-                    end
+                    if n then U.currentTarget = n last = n U.tp(n) end
                     U.doPunch()
                 elseif Config.SilentKill2 then
                     if not U.currentTarget or U.dead(U.currentTarget) then
                         U.currentTarget = U.getNearest() or U.getRandom()
                         if U.currentTarget then U.tp(U.currentTarget) last = U.currentTarget end
                     else
-                        U.tp(U.currentTarget)
-                        last = U.currentTarget
+                        U.tp(U.currentTarget) last = U.currentTarget
                     end
                     U.doPunch()
                 end
@@ -97,34 +94,14 @@ task.spawn(function()
     end
 end)
 
-task.spawn(function()
-    while true do
-        if Config.AutoRebirth then U.doRebirth() end
-        task.wait(0.8)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        if Config.AutoChests then U.doChests() end
-        task.wait(1.5)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        if Config.AutoBrawl then U.doBrawl() end
-        task.wait(2)
-    end
-end)
+task.spawn(function() while true do if Config.AutoRebirth then U.doRebirth() end task.wait(0.8) end end)
+task.spawn(function() while true do if Config.AutoChests then U.doChests() end task.wait(1.5) end end)
+task.spawn(function() while true do if Config.AutoBrawl then U.doBrawl() end task.wait(2) end end)
 
 task.spawn(function()
     while true do
         if Config.AntiAFK then
-            pcall(function()
-                VU:CaptureController()
-                VU:ClickButton2(Vector2.new())
-            end)
+            pcall(function() VU:CaptureController() VU:ClickButton2(Vector2.new()) end)
         end
         task.wait(25)
     end
@@ -142,14 +119,18 @@ task.spawn(function()
     end
 end)
 
-U.SaveManager:SetLibrary(Fluent)
-U.InterfaceManager:SetLibrary(Fluent)
-U.SaveManager:IgnoreThemeSettings()
-U.InterfaceManager:SetFolder("Userspin45ML")
-U.SaveManager:SetFolder("Userspin45ML")
-U.InterfaceManager:BuildInterfaceSection(U.Tabs.Credits)
-U.SaveManager:BuildConfigSection(U.Tabs.Credits)
+pcall(function()
+    if U.SaveManager and U.InterfaceManager then
+        U.SaveManager:SetLibrary(Fluent)
+        U.InterfaceManager:SetLibrary(Fluent)
+        U.SaveManager:IgnoreThemeSettings()
+        U.InterfaceManager:SetFolder("Userspin45ML")
+        U.SaveManager:SetFolder("Userspin45ML")
+        U.InterfaceManager:BuildInterfaceSection(U.Tabs.Credits)
+        U.SaveManager:BuildConfigSection(U.Tabs.Credits)
+    end
+end)
 
 U.Window:SelectTab(1)
-Fluent:Notify({Title = "Userspin45", Content = "MEGA FINAL carregado!", Duration = 5})
-print("[Userspin45] part3 OK — MEGA FINAL ready!")
+Fluent:Notify({ Title = "Userspin45", Content = "MEGA FINAL carregado!", Duration = 5 })
+print("[Userspin45] parte3 OK — MEGA FINAL ready!")
