@@ -1,5 +1,4 @@
---[[ parte1.lua — Config + Helpers | Userspin45 ]]
--- Fix: só Punch no kill | treino separado | AutoExecute toggle
+--[[ parte1.lua — Config + Helpers + Glitch Rocks | Userspin45 ]]
 
 getgenv().Userspin45 = getgenv().Userspin45 or {}
 local U = getgenv().Userspin45
@@ -55,13 +54,26 @@ U.Config = {
     SilentKill2 = false,
     KillAura = false,
     AutoServerHop = true,
-    AutoExecute = false, -- TOGGLE
+    AutoExecute = false,
+    GlitchRock = false,
+    GlitchRockName = "Punching Rock",
+    GlitchSpeed = 2,
     AuraSize = 12,
-    AnimSpeed = 1.5
+    AnimSpeed = 1.5,
 }
 
 U.Char, U.Hum, U.HRP = nil, nil, nil
 U.currentTarget, U.killCount, U.KillLabel = nil, 0, nil
+
+U.ROCK_NAMES = {
+    "Tiny Rock", "Punching Rock", "Large Rock", "Golden Rock",
+    "Frozen Rock", "Mythical Rock", "Eternal Rock", "Legends Rock",
+    "Legend Rock", "Jungle Rock", "Ancient Jungle Rock",
+    "Muscle King Rock", "MuscleKing Rock", "King Rock",
+}
+
+local TRAIN_TOOLS = {"Weight", "Pushups", "Situps", "Handstands"}
+local PUNCH_NAMES = {"Punch", "Combat Punch", "Fist", "Gloves"}
 
 function U.refresh()
     U.Char = LP.Character
@@ -79,11 +91,9 @@ LP.CharacterAdded:Connect(function(c)
     U.currentTarget = nil
 end)
 
--- Desequipa todas as tools da mão
 local function unequipAll()
     pcall(function()
-        local bp = LP:FindFirstChild("Backpack")
-        local ch = LP.Character
+        local bp, ch = LP:FindFirstChild("Backpack"), LP.Character
         if not bp or not ch then return end
         for _, t in pairs(ch:GetChildren()) do
             if t:IsA("Tool") then t.Parent = bp end
@@ -91,13 +101,9 @@ local function unequipAll()
     end)
 end
 
--- AUTO LIFT / AUTO STRENGTH → só tools de TREINO
-local TRAIN_TOOLS = {"Weight", "Pushups", "Situps", "Handstands"}
-
 function U.equipTrain()
     pcall(function()
-        local bp = LP:FindFirstChild("Backpack")
-        local ch = LP.Character
+        local bp, ch = LP:FindFirstChild("Backpack"), LP.Character
         if not bp or not ch then return end
         unequipAll()
         for _, name in ipairs(TRAIN_TOOLS) do
@@ -110,40 +116,29 @@ function U.equipTrain()
     end)
 end
 
--- SILENT KILL / FAST PUNCH → só PUNCH
-local PUNCH_NAMES = {"Punch", "Combat Punch", "Fist", "Gloves"}
-
 function U.equipPunch()
     pcall(function()
-        local bp = LP:FindFirstChild("Backpack")
-        local ch = LP.Character
+        local bp, ch = LP:FindFirstChild("Backpack"), LP.Character
         if not bp or not ch then return end
         unequipAll()
-
         local punch = nil
         for _, name in ipairs(PUNCH_NAMES) do
             punch = bp:FindFirstChild(name)
             if punch and punch:IsA("Tool") then break end
             punch = nil
         end
-
-        -- fallback: nome tem "punch" e NÃO é treino
         if not punch then
             for _, t in pairs(bp:GetChildren()) do
                 if t:IsA("Tool") then
                     local n = t.Name:lower()
-                    if n:find("punch")
-                        and not n:find("push")
-                        and not n:find("weight")
-                        and not n:find("sit")
-                        and not n:find("handstand") then
+                    if n:find("punch") and not n:find("push") and not n:find("weight")
+                        and not n:find("sit") and not n:find("handstand") then
                         punch = t
                         break
                     end
                 end
             end
         end
-
         if punch then
             punch.Parent = ch
             pcall(function() punch:Activate() end)
@@ -158,13 +153,11 @@ function U.fireRep()
     end)
 end
 
--- Auto Lift / Auto Strength
 function U.doStrength()
     U.fireRep()
     U.equipTrain()
 end
 
--- Auto Punch / Silent Kill punch
 function U.doPunch()
     U.equipPunch()
     U.fireRep()
@@ -174,7 +167,6 @@ function U.doPunch()
     end)
 end
 
--- remote sem erro do "..."
 function U.remote(name, method, ...)
     local args = {...}
     pcall(function()
@@ -190,49 +182,29 @@ function U.remote(name, method, ...)
     end)
 end
 
-function U.doRebirth()
-    U.remote("rebirthRemote", "InvokeServer", "rebirthRequest")
-end
-
+function U.doRebirth() U.remote("rebirthRemote", "InvokeServer", "rebirthRequest") end
 function U.doChests()
     for _, c in ipairs({"Magma Chest", "Mythical Chest", "Golden Chest", "Enchanted Chest", "Legends Chest"}) do
         U.remote("checkChestRemote", "InvokeServer", c)
     end
 end
-
-function U.doBrawl()
-    U.remote("brawlEvent", "FireServer", "joinBrawl")
-end
-
-function U.openCrystal(n)
-    U.remote("openCrystalRemote", "InvokeServer", "openCrystal", n)
-end
-
-function U.setSize(s)
-    U.remote("changeSpeedSizeRemote", "InvokeServer", "changeSize", s)
-end
+function U.doBrawl() U.remote("brawlEvent", "FireServer", "joinBrawl") end
+function U.openCrystal(n) U.remote("openCrystalRemote", "InvokeServer", "openCrystal", n) end
+function U.setSize(s) U.remote("changeSpeedSizeRemote", "InvokeServer", "changeSize", s) end
 
 function U.setAnim(s)
     pcall(function()
         U.refresh()
         if not U.Hum then return end
-        for _, t in pairs(U.Hum:GetPlayingAnimationTracks()) do
-            t:AdjustSpeed(s)
-        end
+        for _, t in pairs(U.Hum:GetPlayingAnimationTracks()) do t:AdjustSpeed(s) end
         local a = U.Hum:FindFirstChildOfClass("Animator")
-        if a then
-            for _, t in pairs(a:GetPlayingAnimationTracks()) do
-                t:AdjustSpeed(s)
-            end
-        end
+        if a then for _, t in pairs(a:GetPlayingAnimationTracks()) do t:AdjustSpeed(s) end end
     end)
 end
 
 function U.updateCounter()
     if U.KillLabel then
-        pcall(function()
-            U.KillLabel:SetDesc("Kills: " .. tostring(U.killCount))
-        end)
+        pcall(function() U.KillLabel:SetDesc("Kills: " .. tostring(U.killCount)) end)
     end
 end
 
@@ -297,9 +269,7 @@ function U.tp(p)
         if not p or not p.Character then return end
         local r = p.Character:FindFirstChild("HumanoidRootPart")
         U.refresh()
-        if r and U.HRP then
-            U.HRP.CFrame = r.CFrame * CFrame.new(0, 0, 3)
-        end
+        if r and U.HRP then U.HRP.CFrame = r.CFrame * CFrame.new(0, 0, 3) end
     end)
 end
 
@@ -312,18 +282,12 @@ end
 function U.hop()
     pcall(function()
         if U.Fluent then
-            U.Fluent:Notify({
-                Title = "Server Limpo!",
-                Content = "Kills: " .. tostring(U.killCount) .. " | Hop...",
-                Duration = 4
-            })
+            U.Fluent:Notify({ Title = "Server Limpo!", Content = "Kills: " .. U.killCount .. " | Hop...", Duration = 4 })
         end
         task.wait(1.2)
         local pid = game.PlaceId
         local ok, res = pcall(function()
-            return HS:JSONDecode(game:HttpGet(
-                "https://games.roblox.com/v1/games/" .. pid .. "/servers/Public?sortOrder=Asc&limit=100"
-            ))
+            return HS:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. pid .. "/servers/Public?sortOrder=Asc&limit=100"))
         end)
         if ok and res and res.data then
             for _, s in pairs(res.data) do
@@ -337,41 +301,97 @@ function U.hop()
     end)
 end
 
--- AUTO EXECUTE (toggle ON = grava ficheiro | OFF = apaga)
 function U.setAutoExecute(on)
     pcall(function()
         if on then
             if not isfolder("autoexecute") then makefolder("autoexecute") end
             local loader = [[
--- Userspin45 ML AutoExecute
-print("[Userspin45] AutoExecute a correr...")
+print("[Userspin45] AutoExecute...")
 pcall(function()
     loadstring(game:HttpGet("https://cdn.jsdelivr.net/gh/afonsomiguelito13-collab/ML-Script@main/main.lua"))()
 end)
 ]]
             writefile("autoexecute/Userspin45_ML_FINAL.lua", loader)
             writefile("autoexecute/ml_userspin45.lua", loader)
-            if U.Fluent then
-                U.Fluent:Notify({
-                    Title = "AutoExecute ON",
-                    Content = "Salvo na pasta autoexecute do Delta",
-                    Duration = 4
-                })
-            end
-            print("[Userspin45] AutoExecute ON")
+            if U.Fluent then U.Fluent:Notify({ Title = "AutoExecute ON", Content = "Salvo!", Duration = 4 }) end
         else
             pcall(function() delfile("autoexecute/Userspin45_ML_FINAL.lua") end)
             pcall(function() delfile("autoexecute/ml_userspin45.lua") end)
-            if U.Fluent then
-                U.Fluent:Notify({
-                    Title = "AutoExecute OFF",
-                    Content = "Ficheiros removidos",
-                    Duration = 3
-                })
-            end
-            print("[Userspin45] AutoExecute OFF")
+            if U.Fluent then U.Fluent:Notify({ Title = "AutoExecute OFF", Content = "Removido", Duration = 3 }) end
         end
     end)
+end
+
+-- GLITCH ROCKS
+function U.findRock(name)
+    local target = nil
+    local function scan(parent)
+        for _, obj in pairs(parent:GetDescendants()) do
+            if obj:IsA("BasePart") or obj:IsA("Model") then
+                local n = obj.Name
+                if n == name or n:lower() == (name and name:lower() or "") or (name and n:find(name)) then
+                    if obj:IsA("Model") then
+                        local p = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                        if p then target = p return end
+                    else
+                        target = obj
+                        return
+                    end
+                end
+            end
+        end
+    end
+    pcall(function()
+        if workspace:FindFirstChild("Rocks") then scan(workspace.Rocks) end
+        scan(workspace)
+    end)
+    return target
+end
+
+function U.findAnyRock()
+    for _, name in ipairs(U.ROCK_NAMES) do
+        local r = U.findRock(name)
+        if r then return r, name end
+    end
+    local found = nil
+    pcall(function()
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                local n = obj.Name:lower()
+                if n:find("rock") and not n:find("bedrock") then
+                    found = obj
+                    break
+                end
+            end
+        end
+    end)
+    return found, found and found.Name or nil
+end
+
+function U.hitRock(part)
+    if not part then return end
+    pcall(function()
+        U.equipPunch()
+        U.refresh()
+        local hrp = U.HRP
+        if not hrp then return end
+        if firetouchinterest then
+            firetouchinterest(hrp, part, 0)
+            firetouchinterest(hrp, part, 1)
+        end
+        local tool = LP.Character and LP.Character:FindFirstChildOfClass("Tool")
+        if tool then pcall(function() tool:Activate() end) end
+        VU:CaptureController()
+        VU:ClickButton1(Vector2.new())
+        U.fireRep()
+    end)
+end
+
+function U.doGlitchRock()
+    local name = U.Config.GlitchRockName or "Punching Rock"
+    local rock = U.findRock(name)
+    if not rock then rock = select(1, U.findAnyRock()) end
+    if rock then U.hitRock(rock) end
 end
 
 print("[Userspin45] parte1 OK")
