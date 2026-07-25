@@ -1,84 +1,89 @@
 --[[
     Muscle Legends MEGA FINAL
     Creator: Userspin45
-    Loader HTTPS + prints claros
+    main.lua completo + DEBUG
     Repo: https://github.com/afonsomiguelito13-collab/ML-Script
 ]]
+
+print("========================================")
+print("[Userspin45] main.lua iniciado")
+print("========================================")
 
 local USER = "afonsomiguelito13-collab"
 local REPO = "ML-Script"
 local BRANCHES = {"main", "master"}
 
+-- nomes em português (como tu meteste)
+local PARTES = {
+    "parte1.lua",
+    "parte2.lua",
+    "parte3.lua",
+}
+
 local function httpGet(url)
-    local ok, result = pcall(function()
+    local ok, res = pcall(function()
         return game:HttpGet(url, true)
     end)
-    if ok and type(result) == "string" and #result > 20 then
-        return result
+    if ok and type(res) == "string" and #res > 30 then
+        return res
     end
-    ok, result = pcall(function()
+    ok, res = pcall(function()
         return game:HttpGet(url)
     end)
-    if ok and type(result) == "string" and #result > 20 then
-        return result
+    if ok and type(res) == "string" and #res > 30 then
+        return res
     end
     return nil
 end
 
-local function loadFromUrl(url, name)
-    print("[Userspin45] Baixando: " .. name)
-    local source = httpGet(url)
-    if not source then
-        print("[Userspin45] Não carregou → " .. name .. " (HttpGet falhou)")
-        return false
-    end
-
-    local fn, err = loadstring(source)
-    if not fn then
-        print("[Userspin45] Não carregou → " .. name .. " (loadstring: " .. tostring(err) .. ")")
-        return false
-    end
-
-    local ok, runErr = pcall(fn)
-    if not ok then
-        print("[Userspin45] Não carregou → " .. name .. " (erro: " .. tostring(runErr) .. ")")
-        return false
-    end
-
-    print("[Userspin45] Carregou → " .. name)
-    return true
-end
-
-local function loadPart(name)
+local function loadParte(nome)
     for _, branch in ipairs(BRANCHES) do
         local url = string.format(
             "https://raw.githubusercontent.com/%s/%s/%s/%s?t=%d",
-            USER, REPO, branch, name, os.time()
+            USER, REPO, branch, nome, os.time()
         )
-        if loadFromUrl(url, name) then
-            return true
+        print("[DEBUG] Baixando: " .. branch .. "/" .. nome)
+
+        local source = httpGet(url)
+        if not source then
+            print("[DEBUG] ❌ HttpGet falhou → " .. nome)
+        else
+            print("[DEBUG] ✅ Download OK → " .. nome .. " | " .. #source .. " chars")
+
+            local fn, err = loadstring(source)
+            if not fn then
+                print("[DEBUG] ❌ loadstring falhou → " .. nome)
+                print("[DEBUG] Erro: " .. tostring(err))
+            else
+                local ok, runErr = pcall(fn)
+                if not ok then
+                    print("[DEBUG] ❌ Erro ao executar → " .. nome)
+                    print("[DEBUG] Erro: " .. tostring(runErr))
+                else
+                    print("[DEBUG] ✅ Carregou → " .. nome)
+                    return true
+                end
+            end
         end
-        task.wait(0.25)
+        task.wait(0.2)
     end
     return false
 end
 
-print("========================================")
-print("[Userspin45] Loader MEGA FINAL")
-print("========================================")
+print("[Userspin45] A carregar as 3 partes...")
 
-local ok1 = loadPart("part1.lua")
+local ok1 = loadParte(PARTES[1])
 local ok2 = false
 local ok3 = false
 
 if ok1 then
     task.wait(0.15)
-    ok2 = loadPart("part2.lua")
+    ok2 = loadParte(PARTES[2])
 end
 
 if ok2 then
     task.wait(0.15)
-    ok3 = loadPart("part3.lua")
+    ok3 = loadParte(PARTES[3])
 end
 
 print("========================================")
@@ -87,9 +92,9 @@ if ok1 and ok2 and ok3 then
     print("[Userspin45] MEGA FINAL pronto!")
 else
     print("[Userspin45] Não carregou ❌")
-    print("part1 = " .. (ok1 and "OK" or "FALHOU"))
-    print("part2 = " .. (ok2 and "OK" or "FALHOU"))
-    print("part3 = " .. (ok3 and "OK" or "FALHOU"))
-    print("Verifica se os ficheiros estão no GitHub (raiz, branch main)")
+    print("parte1 = " .. (ok1 and "OK" or "FALHOU"))
+    print("parte2 = " .. (ok2 and "OK" or "FALHOU"))
+    print("parte3 = " .. (ok3 and "OK" or "FALHOU"))
+    print("Confirma no GitHub os nomes: parte1.lua | parte2.lua | parte3.lua")
 end
 print("========================================")
