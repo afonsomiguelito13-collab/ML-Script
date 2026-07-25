@@ -1,4 +1,4 @@
---[[ parte3.lua — Loops + Final | Userspin45 ]]
+--[[ parte3.lua — Loops + Glitch + Final | Userspin45 ]]
 
 local U = getgenv().Userspin45
 if not U or not U.Fluent or not U.Window then
@@ -13,7 +13,7 @@ local VU = game:GetService("VirtualUser")
 task.spawn(function()
     while true do
         if Config.AutoStrength then U.doStrength() U.setAnim(Config.AnimSpeed) end
-        if Config.FastPunch and not Config.SilentKill and not Config.SilentKill2 then
+        if Config.FastPunch and not Config.SilentKill and not Config.SilentKill2 and not Config.GlitchRock then
             U.doPunch() U.setAnim(Config.AnimSpeed)
         end
         task.wait(0.35)
@@ -94,6 +94,22 @@ task.spawn(function()
     end
 end)
 
+-- GLITCH ROCK
+task.spawn(function()
+    while true do
+        if Config.GlitchRock then
+            pcall(function()
+                U.doGlitchRock()
+                U.setAnim(Config.GlitchSpeed or 2)
+            end)
+            local spd = Config.GlitchSpeed or 2
+            task.wait(math.max(0.08, 0.28 / spd))
+        else
+            task.wait(0.3)
+        end
+    end
+end)
+
 task.spawn(function() while true do if Config.AutoRebirth then U.doRebirth() end task.wait(0.8) end end)
 task.spawn(function() while true do if Config.AutoChests then U.doChests() end task.wait(1.5) end end)
 task.spawn(function() while true do if Config.AutoBrawl then U.doBrawl() end task.wait(2) end end)
@@ -132,5 +148,5 @@ pcall(function()
 end)
 
 U.Window:SelectTab(1)
-Fluent:Notify({ Title = "Userspin45", Content = "MEGA FINAL carregado!", Duration = 5 })
+Fluent:Notify({ Title = "Userspin45", Content = "MEGA FINAL + Glitch carregado!", Duration = 5 })
 print("[Userspin45] parte3 OK — MEGA FINAL ready!")
