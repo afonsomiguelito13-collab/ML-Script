@@ -1,10 +1,9 @@
 --[[ parte1.lua — Config + Helpers | Userspin45 ]]
--- Fix: Cannot use "..." outside of a vararg function
+-- Fix: só Punch no kill | treino separado | AutoExecute toggle
 
 getgenv().Userspin45 = getgenv().Userspin45 or {}
 local U = getgenv().Userspin45
 
--- Fluent (tenta jsDelivr se raw falhar)
 local function loadLib(urls)
     for _, url in ipairs(urls) do
         local ok, src = pcall(function() return game:HttpGet(url) end)
@@ -33,7 +32,7 @@ U.InterfaceManager = loadLib({
 })
 
 if not U.Fluent then
-    warn("[Userspin45] Fluent NÃO carregou (Https/HttpGet)")
+    warn("[Userspin45] Fluent NÃO carregou")
     return
 end
 
@@ -56,6 +55,7 @@ U.Config = {
     SilentKill2 = false,
     KillAura = false,
     AutoServerHop = true,
+    AutoExecute = false, -- TOGGLE
     AuraSize = 12,
     AnimSpeed = 1.5
 }
@@ -79,7 +79,8 @@ LP.CharacterAdded:Connect(function(c)
     U.currentTarget = nil
 end)
 
-function U.equip(list)
+-- Desequipa todas as tools da mão
+local function unequipAll()
     pcall(function()
         local bp = LP:FindFirstChild("Backpack")
         local ch = LP.Character
@@ -87,9 +88,21 @@ function U.equip(list)
         for _, t in pairs(ch:GetChildren()) do
             if t:IsA("Tool") then t.Parent = bp end
         end
-        for _, n in ipairs(list) do
-            local t = bp:FindFirstChild(n)
-            if t then
+    end)
+end
+
+-- AUTO LIFT / AUTO STRENGTH → só tools de TREINO
+local TRAIN_TOOLS = {"Weight", "Pushups", "Situps", "Handstands"}
+
+function U.equipTrain()
+    pcall(function()
+        local bp = LP:FindFirstChild("Backpack")
+        local ch = LP.Character
+        if not bp or not ch then return end
+        unequipAll()
+        for _, name in ipairs(TRAIN_TOOLS) do
+            local t = bp:FindFirstChild(name)
+            if t and t:IsA("Tool") then
                 t.Parent = ch
                 pcall(function() t:Activate() end)
             end
@@ -97,25 +110,44 @@ function U.equip(list)
     end)
 end
 
+-- SILENT KILL / FAST PUNCH → só PUNCH
+local PUNCH_NAMES = {"Punch", "Combat Punch", "Fist", "Gloves"}
+
 function U.equipPunch()
     pcall(function()
         local bp = LP:FindFirstChild("Backpack")
         local ch = LP.Character
         if not bp or not ch then return end
-        for _, t in pairs(ch:GetChildren()) do
-            if t:IsA("Tool") then t.Parent = bp end
+        unequipAll()
+
+        local punch = nil
+        for _, name in ipairs(PUNCH_NAMES) do
+            punch = bp:FindFirstChild(name)
+            if punch and punch:IsA("Tool") then break end
+            punch = nil
         end
-        for _, t in pairs(bp:GetChildren()) do
-            if t:IsA("Tool") then
-                local n = t.Name:lower()
-                if n:find("punch") or n:find("glove") or n:find("fist") or n:find("brawl")
-                    or n:find("fight") or n:find("hand") or n:find("strength") or n:find("soco") then
-                    t.Parent = ch
-                    pcall(function() t:Activate() end)
+
+        -- fallback: nome tem "punch" e NÃO é treino
+        if not punch then
+            for _, t in pairs(bp:GetChildren()) do
+                if t:IsA("Tool") then
+                    local n = t.Name:lower()
+                    if n:find("punch")
+                        and not n:find("push")
+                        and not n:find("weight")
+                        and not n:find("sit")
+                        and not n:find("handstand") then
+                        punch = t
+                        break
+                    end
                 end
             end
         end
-        U.equip({"Weight", "Handstands", "Pushups"})
+
+        if punch then
+            punch.Parent = ch
+            pcall(function() punch:Activate() end)
+        end
     end)
 end
 
@@ -126,21 +158,23 @@ function U.fireRep()
     end)
 end
 
+-- Auto Lift / Auto Strength
 function U.doStrength()
     U.fireRep()
-    U.equip({"Weight", "Pushups", "Situps", "Handstands"})
+    U.equipTrain()
 end
 
+-- Auto Punch / Silent Kill punch
 function U.doPunch()
-    U.fireRep()
     U.equipPunch()
+    U.fireRep()
     pcall(function()
         VU:CaptureController()
         VU:ClickButton1(Vector2.new())
     end)
 end
 
--- FIX: ... fora de vararg
+-- remote sem erro do "..."
 function U.remote(name, method, ...)
     local args = {...}
     pcall(function()
@@ -303,14 +337,39 @@ function U.hop()
     end)
 end
 
-function U.saveAuto()
+-- AUTO EXECUTE (toggle ON = grava ficheiro | OFF = apaga)
+function U.setAutoExecute(on)
     pcall(function()
-        if not isfolder("autoexecute") then makefolder("autoexecute") end
-        local c = 'print("[Userspin45] AutoExecute OK")'
-        writefile("autoexecute/Userspin45_ML_FINAL.lua", c)
-        writefile("autoexecute/ml_userspin45.lua", c)
-        if U.Fluent then
-            U.Fluent:Notify({ Title = "AutoExecute", Content = "Salvo!", Duration = 5 })
+        if on then
+            if not isfolder("autoexecute") then makefolder("autoexecute") end
+            local loader = [[
+-- Userspin45 ML AutoExecute
+print("[Userspin45] AutoExecute a correr...")
+pcall(function()
+    loadstring(game:HttpGet("https://cdn.jsdelivr.net/gh/afonsomiguelito13-collab/ML-Script@main/main.lua"))()
+end)
+]]
+            writefile("autoexecute/Userspin45_ML_FINAL.lua", loader)
+            writefile("autoexecute/ml_userspin45.lua", loader)
+            if U.Fluent then
+                U.Fluent:Notify({
+                    Title = "AutoExecute ON",
+                    Content = "Salvo na pasta autoexecute do Delta",
+                    Duration = 4
+                })
+            end
+            print("[Userspin45] AutoExecute ON")
+        else
+            pcall(function() delfile("autoexecute/Userspin45_ML_FINAL.lua") end)
+            pcall(function() delfile("autoexecute/ml_userspin45.lua") end)
+            if U.Fluent then
+                U.Fluent:Notify({
+                    Title = "AutoExecute OFF",
+                    Content = "Ficheiros removidos",
+                    Duration = 3
+                })
+            end
+            print("[Userspin45] AutoExecute OFF")
         end
     end)
 end
