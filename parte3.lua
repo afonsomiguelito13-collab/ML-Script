@@ -56,15 +56,16 @@ local function addKill()
     end
 end
 
+-- SÓ tool:Activate (SEM ClickButton1)
 local function activateTool()
     local char = LP.Character
     if not char then return end
     local tool = char:FindFirstChildOfClass("Tool")
-    if tool then pcall(function() tool:Activate() end) end
-    pcall(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton1(Vector2.new())
-    end)
+    if tool then
+        pcall(function()
+            tool:Activate()
+        end)
+    end
 end
 
 local function nearestPlayer(maxDist)
@@ -105,12 +106,14 @@ end)
 
 task.spawn(function()
     while true do
-        if ML.Flags.AutoRebirth then ML.fireRebirth() end
+        if ML.Flags.AutoRebirth then
+            ML.fireRebirth()
+        end
         task.wait(0.35)
     end
 end)
 
--- SILENT KILL recommended
+-- SILENT KILL
 task.spawn(function()
     while true do
         if ML.Flags.SilentKill then
@@ -168,7 +171,7 @@ task.spawn(function()
     end
 end)
 
--- GLITCH ROCKS BETA
+-- GLITCH ROCKS
 local function findRocks()
     local list = {}
     for _, v in ipairs(workspace:GetDescendants()) do
@@ -215,7 +218,7 @@ task.spawn(function()
     end
 end)
 
--- ANTI AFK
+-- ANTI AFK (ClickButton2 ok — não é spam de punch)
 task.spawn(function()
     while true do
         if ML.Flags.AntiAFK then
@@ -266,5 +269,5 @@ task.spawn(function()
     end
 end)
 
-print("[ML] parte3 loops running ✅ SilentKill / Glitch / Farm")
+print("[ML] parte3 loops running ✅ tool:Activate only")
 print("[ML] Userspin45 | " .. (ML.Version or "?"))
