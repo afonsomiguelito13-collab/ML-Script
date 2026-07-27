@@ -1,152 +1,270 @@
---[[ parte3.lua — Loops + Glitch + Final | Userspin45 ]]
+-- ML Script | parte3.lua
+-- Loops: farm, kill, glitch, misc (Userspin45)
+print("[ML] parte3 loops ✅")
 
-local U = getgenv().Userspin45
-if not U or not U.Fluent or not U.Window then
-    warn("[Userspin45] parte1/parte2 não carregaram!")
+local ML = getgenv().ML
+if not ML then
+    warn("[ML] parte1 missing")
     return
 end
 
-local Config = U.Config
-local Fluent = U.Fluent
-local VU = game:GetService("VirtualUser")
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local LP = ML.LP
+
+local kills = 0
+local counterGui
+
+local function ensureCounter()
+    if counterGui and counterGui.Parent then return end
+    local pg = LP:WaitForChild("PlayerGui")
+    counterGui = Instance.new("ScreenGui")
+    counterGui.Name = "ML_KillCounter"
+    counterGui.ResetOnSpawn = false
+    counterGui.IgnoreGuiInset = true
+    counterGui.Parent = pg
+    local lab = Instance.new("TextLabel")
+    lab.Name = "Label"
+    lab.Size = UDim2.fromOffset(160, 36)
+    lab.Position = UDim2.new(0.5, -80, 0, 40)
+    lab.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    lab.BackgroundTransparency = 0.25
+    lab.TextColor3 = Color3.fromRGB(255, 220, 220)
+    lab.Font = Enum.Font.GothamBold
+    lab.TextSize = 16
+    lab.Text = "Kills: 0"
+    lab.Parent = counterGui
+    Instance.new("UICorner", lab).CornerRadius = UDim.new(0, 8)
+end
+
+local function setCounterVisible(on)
+    if on then
+        ensureCounter()
+        counterGui.Enabled = true
+        local lab = counterGui:FindFirstChild("Label")
+        if lab then lab.Text = "Kills: " .. kills end
+    elseif counterGui then
+        counterGui.Enabled = false
+    end
+end
+
+local function addKill()
+    kills += 1
+    if counterGui and counterGui.Enabled then
+        local lab = counterGui:FindFirstChild("Label")
+        if lab then lab.Text = "Kills: " .. kills end
+    end
+end
+
+local function activateTool()
+    local char = LP.Character
+    if not char then return end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then pcall(function() tool:Activate() end) end
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new())
+    end)
+end
+
+local function nearestPlayer(maxDist)
+    local hrp = ML.getHRP()
+    if not hrp then return nil end
+    local best, bestD
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LP and plr.Character then
+            local ohrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if ohrp and hum and hum.Health > 0 then
+                local d = (ohrp.Position - hrp.Position).Magnitude
+                if d <= (maxDist or 1e9) and (not bestD or d < bestD) then
+                    best, bestD = plr, d
+                end
+            end
+        end
+    end
+    return best, bestD
+end
+
+-- FARM
+task.spawn(function()
+    while true do
+        if ML.Flags.AutoLift or ML.Flags.AutoStrength then
+            ML.equipTrain()
+            ML.fireRep()
+            activateTool()
+        end
+        if ML.Flags.FastPunch then
+            ML.equipPunch()
+            ML.fireRep()
+            activateTool()
+        end
+        task.wait(0.12)
+    end
+end)
 
 task.spawn(function()
     while true do
-        if Config.AutoStrength then U.doStrength() U.setAnim(Config.AnimSpeed) end
-        if Config.FastPunch and not Config.SilentKill and not Config.SilentKill2 and not Config.GlitchRock then
-            U.doPunch() U.setAnim(Config.AnimSpeed)
-        end
+        if ML.Flags.AutoRebirth then ML.fireRebirth() end
         task.wait(0.35)
     end
 end)
 
+-- SILENT KILL recommended
 task.spawn(function()
-    local last = nil
     while true do
-        if Config.SilentKill and not Config.SilentKill2 then
-            pcall(function()
-                if last and U.dead(last) then
-                    U.killCount = U.killCount + 1
-                    U.updateCounter()
-                    last = nil
-                    U.currentTarget = nil
+        if ML.Flags.SilentKill then
+            ML.equipPunch()
+            local target = nearestPlayer(200)
+            if target and target.Character then
+                local thrp = target.Character:FindFirstChild("HumanoidRootPart")
+                local hrp = ML.getHRP()
+                if thrp and hrp then
+                    hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, 3)
+                    activateTool()
+                    ML.fireRep()
+                    local hum = target.Character:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health <= 0 then addKill() end
                 end
-                if not U.currentTarget or U.dead(U.currentTarget) then
-                    U.currentTarget = U.getNearest() or U.getRandom()
-                    if U.currentTarget then U.tp(U.currentTarget) last = U.currentTarget end
-                else
-                    U.tp(U.currentTarget) last = U.currentTarget
-                end
-                U.doPunch()
-                U.setAnim(Config.AnimSpeed)
-                if Config.AutoServerHop and U.aliveCount() == 0 then
-                    task.wait(0.8)
-                    if U.aliveCount() == 0 then U.hop() end
-                end
-            end)
+            end
+            task.wait(0.08)
+        else
+            task.wait(0.2)
         end
-        task.wait(0.22)
     end
 end)
 
+-- SILENT KILL 2 / AURA
 task.spawn(function()
-    local last = nil
     while true do
-        if Config.SilentKill2 or Config.KillAura then
-            pcall(function()
-                U.refresh()
-                if not U.HRP then return end
-                if last and U.dead(last) then
-                    U.killCount = U.killCount + 1
-                    U.updateCounter()
-                    last = nil
-                    U.currentTarget = nil
-                end
-                local aura = U.inAura()
-                if #aura > 0 then
-                    local n, d = nil, math.huge
-                    for _, p in ipairs(aura) do
-                        local r = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-                        if r then
-                            local dist = (U.HRP.Position - r.Position).Magnitude
-                            if dist < d then d, n = dist, p end
+        local auraOn = ML.Flags.SilentKill2 or ML.Flags.KillAura
+        if auraOn then
+            ML.equipPunch()
+            local size = ML.Settings.AuraSize or 15
+            local hrp = ML.getHRP()
+            if hrp then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LP and plr.Character then
+                        local ohrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        if ohrp and hum and hum.Health > 0 then
+                            local d = (ohrp.Position - hrp.Position).Magnitude
+                            if d <= size then
+                                if ML.Flags.SilentKill2 then
+                                    hrp.CFrame = ohrp.CFrame * CFrame.new(0, 0, 2.5)
+                                end
+                                activateTool()
+                                ML.fireRep()
+                                if hum.Health <= 0 then addKill() end
+                            end
                         end
                     end
-                    if n then U.currentTarget = n last = n U.tp(n) end
-                    U.doPunch()
-                elseif Config.SilentKill2 then
-                    if not U.currentTarget or U.dead(U.currentTarget) then
-                        U.currentTarget = U.getNearest() or U.getRandom()
-                        if U.currentTarget then U.tp(U.currentTarget) last = U.currentTarget end
-                    else
-                        U.tp(U.currentTarget) last = U.currentTarget
-                    end
-                    U.doPunch()
                 end
-                U.setAnim(Config.AnimSpeed)
-                if Config.AutoServerHop and Config.SilentKill2 and U.aliveCount() == 0 then
-                    task.wait(0.8)
-                    if U.aliveCount() == 0 then U.hop() end
-                end
-            end)
-        end
-        task.wait(0.18)
-    end
-end)
-
--- GLITCH ROCK
-task.spawn(function()
-    while true do
-        if Config.GlitchRock then
-            pcall(function()
-                U.doGlitchRock()
-                U.setAnim(Config.GlitchSpeed or 2)
-            end)
-            local spd = Config.GlitchSpeed or 2
-            task.wait(math.max(0.08, 0.28 / spd))
+            end
+            task.wait(0.06)
         else
-            task.wait(0.3)
+            task.wait(0.2)
         end
     end
 end)
 
-task.spawn(function() while true do if Config.AutoRebirth then U.doRebirth() end task.wait(0.8) end end)
-task.spawn(function() while true do if Config.AutoChests then U.doChests() end task.wait(1.5) end end)
-task.spawn(function() while true do if Config.AutoBrawl then U.doBrawl() end task.wait(2) end end)
-
-task.spawn(function()
-    while true do
-        if Config.AntiAFK then
-            pcall(function() VU:CaptureController() VU:ClickButton2(Vector2.new()) end)
-        end
-        task.wait(25)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        if Config.AntiDie then
-            U.refresh()
-            if U.Hum and U.Hum.Health < U.Hum.MaxHealth * 0.4 then
-                U.Hum.Health = U.Hum.MaxHealth
+-- GLITCH ROCKS BETA
+local function findRocks()
+    local list = {}
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            local n = v.Name
+            for _, rn in ipairs(ML.RockNames) do
+                if string.find(string.lower(n), string.lower(rn), 1, true) then
+                    table.insert(list, v)
+                    break
+                end
             end
         end
-        task.wait(0.4)
+    end
+    return list
+end
+
+task.spawn(function()
+    local rocks, lastScan = {}, 0
+    while true do
+        if ML.Flags.GlitchRocks then
+            if tick() - lastScan > 8 or #rocks == 0 then
+                rocks = findRocks()
+                lastScan = tick()
+            end
+            ML.equipPunch()
+            local hrp = ML.getHRP()
+            for _, rock in ipairs(rocks) do
+                if rock and rock.Parent then
+                    pcall(function()
+                        if firetouchinterest and hrp then
+                            firetouchinterest(hrp, rock, 0)
+                            firetouchinterest(hrp, rock, 1)
+                        end
+                    end)
+                    activateTool()
+                    ML.fireRep()
+                end
+            end
+            local spd = tonumber(ML.Settings.GlitchSpeed) or 2
+            task.wait(math.max(0.05, 0.2 / spd))
+        else
+            task.wait(0.4)
+        end
     end
 end)
 
-pcall(function()
-    if U.SaveManager and U.InterfaceManager then
-        U.SaveManager:SetLibrary(Fluent)
-        U.InterfaceManager:SetLibrary(Fluent)
-        U.SaveManager:IgnoreThemeSettings()
-        U.InterfaceManager:SetFolder("Userspin45ML")
-        U.SaveManager:SetFolder("Userspin45ML")
-        U.InterfaceManager:BuildInterfaceSection(U.Tabs.Credits)
-        U.SaveManager:BuildConfigSection(U.Tabs.Credits)
+-- ANTI AFK
+task.spawn(function()
+    while true do
+        if ML.Flags.AntiAFK then
+            pcall(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end)
+        end
+        task.wait(30)
+    end
+end)
+LP.Idled:Connect(function()
+    if ML.Flags.AntiAFK then
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
     end
 end)
 
-U.Window:SelectTab(1)
-Fluent:Notify({ Title = "Userspin45", Content = "MEGA FINAL + Glitch carregado!", Duration = 5 })
-print("[Userspin45] parte3 OK — MEGA FINAL ready!")
+-- ANTI DIE
+task.spawn(function()
+    while true do
+        if ML.Flags.AntiDie then
+            local hum = ML.getHum()
+            if hum and hum.Health < hum.MaxHealth * 0.2 then
+                pcall(function() hum.Health = hum.MaxHealth end)
+            end
+        end
+        task.wait(0.5)
+    end
+end)
+
+local function onChar(char)
+    task.wait(0.3)
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum and ML.Settings.WalkSpeed then
+        pcall(function() hum.WalkSpeed = ML.Settings.WalkSpeed end)
+    end
+end
+if LP.Character then onChar(LP.Character) end
+LP.CharacterAdded:Connect(onChar)
+
+task.spawn(function()
+    while true do
+        setCounterVisible(ML.Flags.KillCounter == true)
+        task.wait(0.5)
+    end
+end)
+
+print("[ML] parte3 loops running ✅ SilentKill / Glitch / Farm")
+print("[ML] Userspin45 | " .. (ML.Version or "?"))
