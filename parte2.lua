@@ -1,305 +1,289 @@
--- ML Script | parte2.lua
--- Fluent UI + tabs + Open/Close dragon button (Userspin45)
-print("[ML] parte2 UI OK")
+-- ML Script | parte3.lua
+-- Loops: farm, kill, auto rock (far), misc (Userspin45)
+print("[ML] parte3 loops OK")
 
 local ML = getgenv().ML
 if not ML then
-    warn("[ML] parte1 not loaded")
+    warn("[ML] parte1 missing")
     return
 end
 
-local Fluent
-local okFluent, errFluent = pcall(function()
-    Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-end)
-if not okFluent or not Fluent then
-    okFluent, errFluent = pcall(function()
-        Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/src/init.lua"))()
-    end)
-end
-if not Fluent then
-    warn("[ML] Fluent failed to load:", errFluent)
-    print("[ML] UI lib fail - features still in ML.Flags via getgenv")
-    return
-end
-
-pcall(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-end)
-
-local Window = Fluent:CreateWindow({
-    Title = "ML Script",
-    SubTitle = "Userspin45 | MEGA",
-    TabWidth = 130,
-    Size = UDim2.fromOffset(520, 380),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
-})
-
-getgenv().ML_Window = Window
-ML.Window = Window
-
-local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "dumbbell" }),
-    Kill = Window:AddTab({ Title = "Kill", Icon = "swords" }),
-    Glitch = Window:AddTab({ Title = "Glitch", Icon = "sparkles" }),
-    Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
-    TPs = Window:AddTab({ Title = "TPs", Icon = "map-pin" }),
-    Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
-}
-
-local function addToggle(tab, name, flagKey, default, cb)
-    return tab:AddToggle(flagKey, {
-        Title = name,
-        Default = default or false,
-        Callback = function(state)
-            ML.Flags[flagKey] = state
-            if cb then pcall(cb, state) end
-        end
-    })
-end
-
--- MAIN
-Tabs.Main:AddParagraph({ Title = "Farm", Content = "Auto Lift / Punch / Strength / Rebirth" })
-addToggle(Tabs.Main, "Auto Lift", "AutoLift", false)
-addToggle(Tabs.Main, "Fast Punch (Punch only)", "FastPunch", false)
-addToggle(Tabs.Main, "Auto Strength (train tools)", "AutoStrength", false)
-addToggle(Tabs.Main, "Auto Rebirth", "AutoRebirth", false)
-addToggle(Tabs.Main, "Auto Chests", "AutoChests", false)
-addToggle(Tabs.Main, "Auto Brawl", "AutoBrawl", false)
-
--- KILL
-Tabs.Kill:AddParagraph({ Title = "Combat", Content = "Silent Kill recommended | SK2 = aggressive" })
-addToggle(Tabs.Kill, "Silent Kill [Recommended]", "SilentKill", false)
-addToggle(Tabs.Kill, "Silent Kill 2 (Aura hate mode)", "SilentKill2", false)
-addToggle(Tabs.Kill, "Kill Aura", "KillAura", false)
-Tabs.Kill:AddSlider("AuraSize", {
-    Title = "Aura / Hitbox Size",
-    Description = "Silent Kill 2 / Kill Aura range",
-    Default = 15,
-    Min = 5,
-    Max = 50,
-    Rounding = 0,
-    Callback = function(v)
-        ML.Settings.AuraSize = v
-    end
-})
-
--- GLITCH
-Tabs.Glitch:AddParagraph({
-    Title = "Glitch Rocks [BETA]",
-    Content = "Hit rocks from anywhere - 2x speed - walk/talk free"
-})
-addToggle(Tabs.Glitch, "Glitch Rocks [BETA]", "GlitchRocks", false)
-Tabs.Glitch:AddSlider("GlitchSpeed", {
-    Title = "Glitch Punch Speed",
-    Default = 2,
-    Min = 1,
-    Max = 5,
-    Rounding = 1,
-    Callback = function(v)
-        ML.Settings.GlitchSpeed = v
-    end
-})
-Tabs.Glitch:AddParagraph({
-    Title = "Warning",
-    Content = "GLITCH IS IN BETA - may break after updates"
-})
-
--- MISC
-Tabs.Misc:AddParagraph({ Title = "Quality of life", Content = "Anti AFK / Die / Speed / Counter" })
-addToggle(Tabs.Misc, "Anti AFK", "AntiAFK", false)
-addToggle(Tabs.Misc, "Anti Die", "AntiDie", false)
-addToggle(Tabs.Misc, "Kill Counter UI", "KillCounter", false)
-addToggle(Tabs.Misc, "Auto Execute (Delta) - weak", "AutoExecute", false)
-Tabs.Misc:AddSlider("WalkSpeed", {
-    Title = "WalkSpeed",
-    Default = 16,
-    Min = 16,
-    Max = 120,
-    Rounding = 0,
-    Callback = function(v)
-        ML.Settings.WalkSpeed = v
-        local h = ML.getHum()
-        if h then pcall(function() h.WalkSpeed = v end) end
-    end
-})
-Tabs.Misc:AddParagraph({
-    Title = "Warning",
-    Content = "AUTO EXECUTE DOES NOT WORK WELL on all Delta builds"
-})
-
--- TPs
-local function tpTo(cf)
-    local hrp = ML.getHRP()
-    if hrp then
-        hrp.CFrame = cf
-    end
-end
-
-Tabs.TPs:AddButton({
-    Title = "Mythical Gym",
-    Callback = function()
-        tpTo(CFrame.new(2386.89, 139.61, 1094.26))
-    end
-})
-Tabs.TPs:AddButton({
-    Title = "Frost Gym",
-    Callback = function()
-        tpTo(CFrame.new(-2752.57, 125.82, -386.74))
-    end
-})
-Tabs.TPs:AddButton({
-    Title = "Eternal Gym",
-    Callback = function()
-        tpTo(CFrame.new(-6917.79, 182.35, -1336.64))
-    end
-})
-Tabs.TPs:AddButton({
-    Title = "Tiny Island",
-    Callback = function()
-        tpTo(CFrame.new(-4.25, 220.99, 1963.60))
-    end
-})
-Tabs.TPs:AddButton({
-    Title = "Brawl Aura 1",
-    Callback = function()
-        tpTo(CFrame.new(985.91, 163.80, -7037.81))
-    end
-})
-Tabs.TPs:AddButton({
-    Title = "Brawl Aura 2",
-    Callback = function()
-        tpTo(CFrame.new(4466.75, 334.97, -8425.75))
-    end
-})
-Tabs.TPs:AddButton({
-    Title = "Brawl Aura 3",
-    Callback = function()
-        tpTo(CFrame.new(-1901.88, 251.90, -5899.65))
-    end
-})
-
--- CREDITS
-Tabs.Credits:AddParagraph({
-    Title = "ML Script",
-    Content = "Creator: Userspin45\nMuscle Legends MEGA FINAL\nSilent Kill - Glitch - Farm"
-})
-Tabs.Credits:AddParagraph({
-    Title = "Warnings",
-    Content = "- AUTO EXECUTE DOESNT WORK WELL\n- GLITCH ROCKS IS IN BETA\n- Punch tools only on Fast Punch / Silent Kill"
-})
-Tabs.Credits:AddParagraph({
-    Title = "Links",
-    Content = "GitHub: afonsomiguelito13-collab/ML-Script\nScriptBlox: search ML Script"
-})
-
-Window:SelectTab(1)
-
--- ===== BLACK DRAGON TOGGLE BUTTON =====
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local VirtualUser = game:GetService("VirtualUser")
+local LP = ML.LP
 
-local toggleGui = Instance.new("ScreenGui")
-toggleGui.Name = "ML_Script_Toggle"
-toggleGui.ResetOnSpawn = false
-toggleGui.IgnoreGuiInset = true
-toggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-toggleGui.DisplayOrder = 999
-toggleGui.Parent = playerGui
+local kills = 0
+local counterGui
 
-local ICON_ID = 7999214882
-local function iconImage()
-    return "rbxassetid://" .. tostring(ICON_ID)
+local function ensureCounter()
+    if counterGui and counterGui.Parent then return end
+    local pg = LP:WaitForChild("PlayerGui")
+    counterGui = Instance.new("ScreenGui")
+    counterGui.Name = "ML_KillCounter"
+    counterGui.ResetOnSpawn = false
+    counterGui.IgnoreGuiInset = true
+    counterGui.Parent = pg
+    local lab = Instance.new("TextLabel")
+    lab.Name = "Label"
+    lab.Size = UDim2.fromOffset(160, 36)
+    lab.Position = UDim2.new(0.5, -80, 0, 40)
+    lab.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    lab.BackgroundTransparency = 0.25
+    lab.TextColor3 = Color3.fromRGB(255, 220, 220)
+    lab.Font = Enum.Font.GothamBold
+    lab.TextSize = 16
+    lab.Text = "Kills: 0"
+    lab.Parent = counterGui
+    Instance.new("UICorner", lab).CornerRadius = UDim.new(0, 8)
 end
 
-local btn = Instance.new("ImageButton")
-btn.Name = "ToggleBtn"
-btn.Size = UDim2.fromOffset(54, 54)
-btn.Position = UDim2.new(0, 14, 0.45, 0)
-btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-btn.BackgroundTransparency = 0
-btn.Image = ""
-btn.AutoButtonColor = true
-btn.Parent = toggleGui
+local function setCounterVisible(on)
+    if on then
+        ensureCounter()
+        counterGui.Enabled = true
+        local lab = counterGui:FindFirstChild("Label")
+        if lab then lab.Text = "Kills: " .. kills end
+    elseif counterGui then
+        counterGui.Enabled = false
+    end
+end
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = btn
+local function addKill()
+    kills += 1
+    if counterGui and counterGui.Enabled then
+        local lab = counterGui:FindFirstChild("Label")
+        if lab then lab.Text = "Kills: " .. kills end
+    end
+end
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(40, 40, 45)
-stroke.Thickness = 1.2
-stroke.Parent = btn
+-- ONLY tool:Activate (no ClickButton1)
+local function activateTool()
+    local char = LP.Character
+    if not char then return end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then
+        pcall(function() tool:Activate() end)
+    end
+end
 
-local icon = Instance.new("ImageLabel")
-icon.Name = "Icon"
-icon.BackgroundTransparency = 1
-icon.Size = UDim2.fromScale(0.72, 0.72)
-icon.Position = UDim2.fromScale(0.14, 0.14)
-icon.Image = iconImage()
-icon.ScaleType = Enum.ScaleType.Fit
-icon.ZIndex = 2
-icon.Parent = btn
-
-local dragging, dragStart, startPos
-btn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = btn.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
+local function nearestPlayer(maxDist)
+    local hrp = ML.getHRP()
+    if not hrp then return nil end
+    local best, bestD
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LP and plr.Character then
+            local ohrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if ohrp and hum and hum.Health > 0 then
+                local d = (ohrp.Position - hrp.Position).Magnitude
+                if d <= (maxDist or 1e9) and (not bestD or d < bestD) then
+                    best, bestD = plr, d
+                end
             end
+        end
+    end
+    return best, bestD
+end
+
+-- FARM
+task.spawn(function()
+    while true do
+        if ML.Flags.AutoLift or ML.Flags.AutoStrength then
+            ML.equipTrain()
+            ML.fireRep()
+            activateTool()
+        end
+        if ML.Flags.FastPunch then
+            ML.equipPunch()
+            ML.fireRep()
+            activateTool()
+        end
+        task.wait(0.12)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        if ML.Flags.AutoRebirth then ML.fireRebirth() end
+        task.wait(0.35)
+    end
+end)
+
+-- SILENT KILL
+task.spawn(function()
+    while true do
+        if ML.Flags.SilentKill then
+            ML.equipPunch()
+            local target = nearestPlayer(200)
+            if target and target.Character then
+                local thrp = target.Character:FindFirstChild("HumanoidRootPart")
+                local hrp = ML.getHRP()
+                if thrp and hrp then
+                    hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, 3)
+                    activateTool()
+                    ML.fireRep()
+                    local hum = target.Character:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health <= 0 then addKill() end
+                end
+            end
+            task.wait(0.08)
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+-- SILENT KILL 2 / AURA
+task.spawn(function()
+    while true do
+        local auraOn = ML.Flags.SilentKill2 or ML.Flags.KillAura
+        if auraOn then
+            ML.equipPunch()
+            local size = ML.Settings.AuraSize or 15
+            local hrp = ML.getHRP()
+            if hrp then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LP and plr.Character then
+                        local ohrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        if ohrp and hum and hum.Health > 0 then
+                            local d = (ohrp.Position - hrp.Position).Magnitude
+                            if d <= size then
+                                if ML.Flags.SilentKill2 then
+                                    hrp.CFrame = ohrp.CFrame * CFrame.new(0, 0, 2.5)
+                                end
+                                activateTool()
+                                ML.fireRep()
+                                if hum.Health <= 0 then addKill() end
+                            end
+                        end
+                    end
+                end
+            end
+            task.wait(0.06)
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+-- AUTO ROCK FAR (hub method)
+local function findRocks()
+    local list, seen = {}, {}
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not seen[v] then
+            local n = string.lower(v.Name)
+            for _, rn in ipairs(ML.RockNames) do
+                if string.find(n, string.lower(rn), 1, true) then
+                    seen[v] = true
+                    table.insert(list, v)
+                    break
+                end
+            end
+        end
+    end
+    return list
+end
+
+local function touchRock(hrp, rock)
+    if not hrp or not rock then return end
+    pcall(function()
+        if firetouchinterest then
+            firetouchinterest(hrp, rock, 0)
+            firetouchinterest(hrp, rock, 1)
+            firetouchinterest(rock, hrp, 0)
+            firetouchinterest(rock, hrp, 1)
+        end
+    end)
+    local char = ML.LP.Character
+    if char and firetouchinterest then
+        for _, limbName in ipairs({ "LeftHand", "RightHand", "LeftFoot", "RightFoot", "Head" }) do
+            local limb = char:FindFirstChild(limbName)
+            if limb then
+                pcall(function()
+                    firetouchinterest(limb, rock, 0)
+                    firetouchinterest(limb, rock, 1)
+                end)
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    local rocks, lastScan = {}, 0
+    while true do
+        if ML.Flags.GlitchRocks then
+            if tick() - lastScan > 6 or #rocks == 0 then
+                rocks = findRocks()
+                lastScan = tick()
+            end
+            ML.equipPunch()
+            local hrp = ML.getHRP()
+            for _, rock in ipairs(rocks) do
+                if rock and rock.Parent then
+                    touchRock(hrp, rock)
+                    activateTool()
+                    ML.fireRep()
+                end
+            end
+            local spd = tonumber(ML.Settings.GlitchSpeed) or 2
+            task.wait(math.max(0.04, 0.18 / spd))
+        else
+            task.wait(0.4)
+        end
+    end
+end)
+
+-- ANTI AFK
+task.spawn(function()
+    while true do
+        if ML.Flags.AntiAFK then
+            pcall(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end)
+        end
+        task.wait(30)
+    end
+end)
+LP.Idled:Connect(function()
+    if ML.Flags.AntiAFK then
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
         end)
     end
 end)
 
-UIS.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        btn.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
-local uiOpen = true
-
-local function setFluentVisible(vis)
-    pcall(function()
-        if Window.Root then
-            Window.Root.Visible = vis
-        end
-    end)
-    pcall(function()
-        if Window.UI then
-            Window.UI.Visible = vis
-        end
-    end)
-    for _, gui in ipairs(playerGui:GetChildren()) do
-        if gui:IsA("ScreenGui") and gui ~= toggleGui then
-            local n = string.lower(gui.Name)
-            if n:find("fluent") or n:find("window") or n:find("ml script") then
-                gui.Visible = vis
+-- ANTI DIE
+task.spawn(function()
+    while true do
+        if ML.Flags.AntiDie then
+            local hum = ML.getHum()
+            if hum and hum.Health < hum.MaxHealth * 0.2 then
+                pcall(function() hum.Health = hum.MaxHealth end)
             end
         end
+        task.wait(0.5)
     end
-end
-
-btn.MouseButton1Click:Connect(function()
-    uiOpen = not uiOpen
-    setFluentVisible(uiOpen)
-    stroke.Color = uiOpen and Color3.fromRGB(40, 40, 45) or Color3.fromRGB(50, 160, 80)
-    icon.ImageTransparency = uiOpen and 0 or 0.15
-    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 end)
 
-print("[ML] parte2 UI + dragon toggle ready OK")
+local function onChar(char)
+    task.wait(0.3)
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum and ML.Settings.WalkSpeed then
+        pcall(function() hum.WalkSpeed = ML.Settings.WalkSpeed end)
+    end
+end
+if LP.Character then onChar(LP.Character) end
+LP.CharacterAdded:Connect(onChar)
+
+task.spawn(function()
+    while true do
+        setCounterVisible(ML.Flags.KillCounter == true)
+        task.wait(0.5)
+    end
+end)
+
+print("[ML] parte3 OK | Auto Rock far | tool:Activate only")
+print("[ML] Userspin45 | " .. (ML.Version or "?"))
