@@ -142,7 +142,7 @@ Tabs.Credits:AddParagraph({
 
 Window:SelectTab(1)
 
--- TOGGLE BUTTON (só Fluent)
+-- ===== BOTÃO PRETO + DRAGÃO (sem texto) =====
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local player = Players.LocalPlayer
@@ -156,23 +156,40 @@ toggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 toggleGui.DisplayOrder = 999
 toggleGui.Parent = playerGui
 
-local btn = Instance.new("TextButton")
+local ICON_ID = 7999214882 -- dragão Userspin45
+local function iconImage()
+    if ICON_ID and ICON_ID ~= 0 then
+        return string.format("rbxthumb://type=Asset&id=%d&w=150&h=150", ICON_ID)
+    end
+    return "rbxassetid://7999214882"
+end
+
+local btn = Instance.new("ImageButton")
 btn.Name = "ToggleBtn"
 btn.Size = UDim2.fromOffset(54, 54)
 btn.Position = UDim2.new(0, 14, 0.45, 0)
-btn.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-btn.Font = Enum.Font.GothamBold
-btn.TextSize = 15
-btn.Text = "ML"
+btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+btn.BackgroundTransparency = 0
+btn.Image = ""
 btn.AutoButtonColor = true
 btn.Parent = toggleGui
 
 Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
+
 local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(90, 90, 110)
+stroke.Color = Color3.fromRGB(40, 40, 45)
 stroke.Thickness = 1.2
 stroke.Parent = btn
+
+local icon = Instance.new("ImageLabel")
+icon.Name = "Icon"
+icon.BackgroundTransparency = 1
+icon.Size = UDim2.fromScale(0.72, 0.72)
+icon.Position = UDim2.fromScale(0.14, 0.14)
+icon.Image = iconImage()
+icon.ScaleType = Enum.ScaleType.Fit
+icon.ZIndex = 2
+icon.Parent = btn
 
 local dragging, dragStart, startPos
 btn.InputBegan:Connect(function(input)
@@ -211,8 +228,9 @@ end
 btn.MouseButton1Click:Connect(function()
     uiOpen = not uiOpen
     setFluentVisible(uiOpen)
-    btn.Text = uiOpen and "ML" or "OPEN"
-    btn.BackgroundColor3 = uiOpen and Color3.fromRGB(28, 28, 34) or Color3.fromRGB(35, 110, 65)
+    stroke.Color = uiOpen and Color3.fromRGB(40, 40, 45) or Color3.fromRGB(50, 160, 80)
+    icon.ImageTransparency = uiOpen and 0 or 0.15
+    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 end)
 
-print("[ML] parte2 UI + toggle button ready ✅")
+print("[ML] parte2 UI + dragon toggle ready ✅"),
