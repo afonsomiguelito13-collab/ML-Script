@@ -1,6 +1,5 @@
 -- ML Script | parte3.lua
--- Loops: farm, kill, Auto Rock (hub method), reconnect (Userspin45)
--- Auto Rock: machinesFolder + neededDurability + firetouchinterest(hands)
+-- Farm / Kill / Auto Rock (selected rock) / Reconnect (Userspin45)
 print("[ML] parte3 loops OK")
 
 local ML = getgenv().ML
@@ -60,7 +59,6 @@ local function addKill()
     end
 end
 
--- ONLY tool:Activate (no ClickButton1)
 local function activateTool()
     local char = LP.Character
     if not char then return end
@@ -89,7 +87,23 @@ local function nearestPlayer(maxDist)
     return best, bestD
 end
 
--- ===== FARM =====
+-- Fast Punch anim 5x (visual only)
+local function speedPunchAnims(mult)
+    local char = LP.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    pcall(function()
+        for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
+            local n = string.lower(track.Name or "")
+            if n:find("punch") or n:find("combat") or n:find("attack") or n:find("hit") or n:find("swing") then
+                track:AdjustSpeed(mult)
+            end
+        end
+    end)
+end
+
+-- Weight / Strength
 task.spawn(function()
     while true do
         if ML.Flags.AutoLift or ML.Flags.AutoWeight then
@@ -102,12 +116,22 @@ task.spawn(function()
             ML.fireRep()
             activateTool()
         end
+        task.wait(0.12)
+    end
+end)
+
+-- Fast Punch 5x anim
+task.spawn(function()
+    while true do
         if ML.Flags.FastPunch then
             ML.equipPunch()
             ML.fireRep()
             activateTool()
+            speedPunchAnims(5)
+            task.wait(0.04)
+        else
+            task.wait(0.25)
         end
-        task.wait(0.12)
     end
 end)
 
@@ -120,7 +144,7 @@ task.spawn(function()
     end
 end)
 
--- ===== SILENT KILL =====
+-- Silent Kill
 task.spawn(function()
     while true do
         if ML.Flags.SilentKill then
@@ -144,7 +168,7 @@ task.spawn(function()
     end
 end)
 
--- ===== SILENT KILL 2 / AURA =====
+-- Silent Kill 2 / Aura
 task.spawn(function()
     while true do
         local auraOn = ML.Flags.SilentKill2 or ML.Flags.KillAura
@@ -168,14 +192,8 @@ task.spawn(function()
                                     local lh = char:FindFirstChild("LeftHand")
                                     local rh = char:FindFirstChild("RightHand")
                                     pcall(function()
-                                        if lh then
-                                            firetouchinterest(ohrp, lh, 0)
-                                            firetouchinterest(ohrp, lh, 1)
-                                        end
-                                        if rh then
-                                            firetouchinterest(ohrp, rh, 0)
-                                            firetouchinterest(ohrp, rh, 1)
-                                        end
+                                        if lh then firetouchinterest(ohrp, lh, 0); firetouchinterest(ohrp, lh, 1) end
+                                        if rh then firetouchinterest(ohrp, rh, 0); firetouchinterest(ohrp, rh, 1) end
                                     end)
                                 end
                                 activateTool()
@@ -194,11 +212,33 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO ROCK [HUB METHOD]
--- machinesFolder → neededDurability → Rock
--- firetouchinterest(Rock, LeftHand/RightHand, 0/1)
--- Punch + Activate + rep  |  works from FAR
+-- AUTO ROCK — filter by SelectedRock (pet glitch safe)
 -- ============================================================
+
+local ROCK_FILTER = {
+    ["All"] = nil,
+    ["Muscle King"] = { "muscle king", "king gym", "musle king" },
+    ["Legend"] = { "legend", "legends", "rock of legends" },
+    ["Tiny"] = { "tiny" },
+    ["Punching"] = { "punching", "punch rock" },
+    ["Golden"] = { "golden", "gold rock" },
+    ["Frost"] = { "frost", "frozen" },
+    ["Eternal"] = { "eternal" },
+    ["Mythical"] = { "mythical", "mythic" },
+    ["Jungle"] = { "jungle", "ancient" },
+    ["Green"] = { "green" },
+}
+
+local function rockMatchesSelection(rock, label)
+    local sel = ML.Settings.SelectedRock or "All"
+    if sel == "All" or not ROCK_FILTER[sel] then return true end
+    local keys = ROCK_FILTER[sel]
+    local hay = string.lower((label or "") .. " " .. (rock and rock.Name or "") .. " " .. (rock and rock.Parent and rock.Parent.Name or ""))
+    for _, k in ipairs(keys) do
+        if string.find(hay, k, 1, true) then return true end
+    end
+    return false
+end
 
 local function getHands()
     local char = LP.Character
@@ -212,51 +252,34 @@ local function touchRockHub(rock)
     local lh, rh = getHands()
     local hrp = ML.getHRP()
     if not firetouchinterest then return end
-
     pcall(function()
-        if rh then
-            firetouchinterest(rock, rh, 0)
-            firetouchinterest(rock, rh, 1)
-        end
-        if lh then
-            firetouchinterest(rock, lh, 0)
-            firetouchinterest(rock, lh, 1)
-        end
-        if rh then
-            firetouchinterest(rh, rock, 0)
-            firetouchinterest(rh, rock, 1)
-        end
-        if lh then
-            firetouchinterest(lh, rock, 0)
-            firetouchinterest(lh, rock, 1)
-        end
+        if rh then firetouchinterest(rock, rh, 0); firetouchinterest(rock, rh, 1) end
+        if lh then firetouchinterest(rock, lh, 0); firetouchinterest(rock, lh, 1) end
+        if rh then firetouchinterest(rh, rock, 0); firetouchinterest(rh, rock, 1) end
+        if lh then firetouchinterest(lh, rock, 0); firetouchinterest(lh, rock, 1) end
         if hrp then
-            firetouchinterest(hrp, rock, 0)
-            firetouchinterest(hrp, rock, 1)
-            firetouchinterest(rock, hrp, 0)
-            firetouchinterest(rock, hrp, 1)
+            firetouchinterest(hrp, rock, 0); firetouchinterest(hrp, rock, 1)
+            firetouchinterest(rock, hrp, 0); firetouchinterest(rock, hrp, 1)
         end
     end)
 end
 
--- Scan A: machinesFolder (melhor / hubs)
 local function findRocksMachines()
     local list, names = {}, {}
     local folder = Workspace:FindFirstChild("machinesFolder")
     if not folder then return list, names end
-
     for _, v in ipairs(folder:GetDescendants()) do
         if v.Name == "neededDurability" and (v:IsA("IntValue") or v:IsA("NumberValue") or v:IsA("DoubleConstrainedValue")) then
             local parent = v.Parent
             if parent then
                 local rock = parent:FindFirstChild("Rock") or parent:FindFirstChildWhichIsA("BasePart")
                 if rock and rock:IsA("BasePart") then
-                    table.insert(list, rock)
                     local label = parent.Name
-                    if v.Value then
-                        label = label .. " [dura " .. tostring(v.Value) .. "]"
+                    if v.Value then label = label .. " [dura " .. tostring(v.Value) .. "]" end
+                    if rockMatchesSelection(rock, label) then
+                        table.insert(list, rock)
+                        table.insert(names, label)
                     end
-                    table.insert(names, label)
                 end
             end
         end
@@ -264,19 +287,22 @@ local function findRocksMachines()
     return list, names
 end
 
--- Scan B: nomes (fallback)
 local function findRocksByName()
     local list, names, seen = {}, {}, {}
     for _, v in ipairs(Workspace:GetDescendants()) do
         if v:IsA("BasePart") and not seen[v] then
             local n = string.lower(v.Name)
+            local matchKeyword = false
             for _, rn in ipairs(ML.RockNames or {}) do
                 if string.find(n, string.lower(rn), 1, true) then
-                    seen[v] = true
-                    table.insert(list, v)
-                    table.insert(names, v.Name)
+                    matchKeyword = true
                     break
                 end
+            end
+            if matchKeyword and rockMatchesSelection(v, v.Name) then
+                seen[v] = true
+                table.insert(list, v)
+                table.insert(names, v.Name)
             end
         end
     end
@@ -300,16 +326,18 @@ task.spawn(function()
             if tick() - lastScan > 5 or #rocks == 0 then
                 rocks = findRocks()
                 lastScan = tick()
-                print("[ML] Auto Rock scan: " .. tostring(#rocks) .. " rock(s)")
+                local sel = ML.Settings.SelectedRock or "All"
+                print("[ML] Auto Rock | sel=" .. sel .. " | found=" .. tostring(#rocks))
                 if #ML.FoundRockNames > 0 then
                     local show = table.concat(ML.FoundRockNames, " | ")
                     if #show > 160 then show = string.sub(show, 1, 160) .. "..." end
                     print("[ML] Rocks: " .. show)
+                elseif sel ~= "All" then
+                    print("[ML] No rock matched selection — try All or another rock")
                 end
             end
 
             ML.equipPunch()
-
             for _, rock in ipairs(rocks) do
                 if rock and rock.Parent then
                     touchRockHub(rock)
@@ -326,7 +354,7 @@ task.spawn(function()
     end
 end)
 
--- ===== ANTI AFK =====
+-- Anti AFK
 task.spawn(function()
     while true do
         if ML.Flags.AntiAFK then
@@ -347,7 +375,7 @@ LP.Idled:Connect(function()
     end
 end)
 
--- ===== ANTI DIE =====
+-- Anti Die
 task.spawn(function()
     while true do
         if ML.Flags.AntiDie then
@@ -360,7 +388,7 @@ task.spawn(function()
     end
 end)
 
--- ===== AUTO RECONNECT =====
+-- Auto Reconnect
 local reconnecting = false
 local function tryReconnect(reason)
     if not ML.Flags.AutoReconnect then return end
@@ -369,9 +397,7 @@ local function tryReconnect(reason)
     print("[ML] Auto Reconnect:", reason or "kick/error")
     task.spawn(function()
         task.wait(1.5)
-        pcall(function()
-            TeleportService:Teleport(game.PlaceId, LP)
-        end)
+        pcall(function() TeleportService:Teleport(game.PlaceId, LP) end)
         task.wait(8)
         reconnecting = false
     end)
@@ -379,9 +405,7 @@ end
 
 pcall(function()
     GuiService.ErrorMessageChanged:Connect(function(msg)
-        if msg and #tostring(msg) > 0 then
-            tryReconnect(tostring(msg))
-        end
+        if msg and #tostring(msg) > 0 then tryReconnect(tostring(msg)) end
     end)
 end)
 
@@ -428,5 +452,5 @@ task.spawn(function()
     end
 end)
 
-print("[ML] parte3 OK | Auto Rock = machinesFolder + firetouchinterest hands (hub method)")
-print("[ML] Weight=Weight | Punch=Punch | AutoReconnect | Userspin45 | " .. (ML.Version or "?"))
+print("[ML] parte3 OK | SelectedRock filter | FastPunch 5x | hub Auto Rock")
+print("[ML] Userspin45 | " .. (ML.Version or "?"))
