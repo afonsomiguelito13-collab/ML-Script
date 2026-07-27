@@ -1,6 +1,6 @@
 -- ML Script | parte3.lua
--- Loops: farm, kill, glitch, misc (Userspin45)
-print("[ML] parte3 loops ✅")
+-- Loops: farm, kill, auto rock (far), misc (Userspin45)
+print("[ML] parte3 loops OK")
 
 local ML = getgenv().ML
 if not ML then
@@ -56,15 +56,13 @@ local function addKill()
     end
 end
 
--- SÓ tool:Activate (SEM ClickButton1)
+-- ONLY tool:Activate (no ClickButton1)
 local function activateTool()
     local char = LP.Character
     if not char then return end
     local tool = char:FindFirstChildOfClass("Tool")
     if tool then
-        pcall(function()
-            tool:Activate()
-        end)
+        pcall(function() tool:Activate() end)
     end
 end
 
@@ -106,9 +104,7 @@ end)
 
 task.spawn(function()
     while true do
-        if ML.Flags.AutoRebirth then
-            ML.fireRebirth()
-        end
+        if ML.Flags.AutoRebirth then ML.fireRebirth() end
         task.wait(0.35)
     end
 end)
@@ -171,14 +167,15 @@ task.spawn(function()
     end
 end)
 
--- GLITCH ROCKS
+-- AUTO ROCK FAR (hub method)
 local function findRocks()
-    local list = {}
+    local list, seen = {}, {}
     for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            local n = v.Name
+        if v:IsA("BasePart") and not seen[v] then
+            local n = string.lower(v.Name)
             for _, rn in ipairs(ML.RockNames) do
-                if string.find(string.lower(n), string.lower(rn), 1, true) then
+                if string.find(n, string.lower(rn), 1, true) then
+                    seen[v] = true
                     table.insert(list, v)
                     break
                 end
@@ -188,11 +185,35 @@ local function findRocks()
     return list
 end
 
+local function touchRock(hrp, rock)
+    if not hrp or not rock then return end
+    pcall(function()
+        if firetouchinterest then
+            firetouchinterest(hrp, rock, 0)
+            firetouchinterest(hrp, rock, 1)
+            firetouchinterest(rock, hrp, 0)
+            firetouchinterest(rock, hrp, 1)
+        end
+    end)
+    local char = ML.LP.Character
+    if char and firetouchinterest then
+        for _, limbName in ipairs({ "LeftHand", "RightHand", "LeftFoot", "RightFoot", "Head" }) do
+            local limb = char:FindFirstChild(limbName)
+            if limb then
+                pcall(function()
+                    firetouchinterest(limb, rock, 0)
+                    firetouchinterest(limb, rock, 1)
+                end)
+            end
+        end
+    end
+end
+
 task.spawn(function()
     local rocks, lastScan = {}, 0
     while true do
         if ML.Flags.GlitchRocks then
-            if tick() - lastScan > 8 or #rocks == 0 then
+            if tick() - lastScan > 6 or #rocks == 0 then
                 rocks = findRocks()
                 lastScan = tick()
             end
@@ -200,25 +221,20 @@ task.spawn(function()
             local hrp = ML.getHRP()
             for _, rock in ipairs(rocks) do
                 if rock and rock.Parent then
-                    pcall(function()
-                        if firetouchinterest and hrp then
-                            firetouchinterest(hrp, rock, 0)
-                            firetouchinterest(hrp, rock, 1)
-                        end
-                    end)
+                    touchRock(hrp, rock)
                     activateTool()
                     ML.fireRep()
                 end
             end
             local spd = tonumber(ML.Settings.GlitchSpeed) or 2
-            task.wait(math.max(0.05, 0.2 / spd))
+            task.wait(math.max(0.04, 0.18 / spd))
         else
             task.wait(0.4)
         end
     end
 end)
 
--- ANTI AFK (ClickButton2 ok — não é spam de punch)
+-- ANTI AFK
 task.spawn(function()
     while true do
         if ML.Flags.AntiAFK then
@@ -269,5 +285,5 @@ task.spawn(function()
     end
 end)
 
-print("[ML] parte3 loops running ✅ tool:Activate only")
+print("[ML] parte3 OK | Auto Rock far | tool:Activate only")
 print("[ML] Userspin45 | " .. (ML.Version or "?"))
