@@ -1,17 +1,35 @@
---[[ parte2.lua — UI + Glitch Tab | Userspin45 ]]
+-- ML Script | parte2.lua
+-- Fluent UI + tabs + Open/Close button (Userspin45)
+print("[ML] parte2 UI ✅")
 
-local U = getgenv().Userspin45
-if not U or not U.Fluent then
-    warn("[Userspin45] parte1 não carregou!")
+local ML = getgenv().ML
+if not ML then
+    warn("[ML] parte1 not loaded")
     return
 end
 
-local Fluent = U.Fluent
-local Config = U.Config
+local Fluent
+local okFluent, errFluent = pcall(function()
+    Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+end)
+if not okFluent or not Fluent then
+    okFluent, errFluent = pcall(function()
+        Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/src/init.lua"))()
+    end)
+end
+if not Fluent then
+    warn("[ML] Fluent failed to load:", errFluent)
+    print("[ML] UI lib fail — features still in ML.Flags via getgenv")
+    return
+end
+
+pcall(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+end)
 
 local Window = Fluent:CreateWindow({
-    Title = "ML Userspin45",
-    SubTitle = "MEGA FINAL",
+    Title = "ML Script",
+    SubTitle = "Userspin45 | MEGA",
     TabWidth = 130,
     Size = UDim2.fromOffset(520, 380),
     Acrylic = true,
@@ -19,241 +37,182 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
+getgenv().ML_Window = Window
+ML.Window = Window
+
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Farm = Window:AddTab({ Title = "Farm", Icon = "zap" }),
+    Main = Window:AddTab({ Title = "Main", Icon = "dumbbell" }),
     Kill = Window:AddTab({ Title = "Kill", Icon = "swords" }),
     Glitch = Window:AddTab({ Title = "Glitch", Icon = "sparkles" }),
-    TP = Window:AddTab({ Title = "TP", Icon = "map" }),
     Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
-    Credits = Window:AddTab({ Title = "Credits", Icon = "user" })
+    TPs = Window:AddTab({ Title = "TPs", Icon = "map-pin" }),
+    Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
 }
-U.Tabs = Tabs
-U.Window = Window
 
--- MAIN
-Tabs.Main:AddToggle("AS", {
-    Title = "Auto Strength (Auto Lift)",
-    Description = "Só Weight / Pushups / Situps / Handstands",
-    Default = false,
-    Callback = function(v)
-        Config.AutoStrength = v
-        if v then U.setAnim(Config.AnimSpeed) else U.setAnim(1) end
-    end
-})
-Tabs.Main:AddToggle("FP", {
-    Title = "Fast Punch",
-    Description = "Só Punch",
-    Default = false,
-    Callback = function(v)
-        Config.FastPunch = v
-        if v then U.equipPunch() end
-    end
-})
-Tabs.Main:AddSlider("ASPD", {
-    Title = "Anim Speed", Default = 1.5, Min = 1, Max = 3.5, Rounding = 1,
-    Callback = function(v)
-        Config.AnimSpeed = v
-        if Config.AutoStrength or Config.FastPunch or Config.SilentKill or Config.SilentKill2 then
-            U.setAnim(v)
+local function addToggle(tab, name, flagKey, default, cb)
+    return tab:AddToggle(flagKey, {
+        Title = name,
+        Default = default or false,
+        Callback = function(state)
+            ML.Flags[flagKey] = state
+            if cb then pcall(cb, state) end
         end
-    end
-})
-Tabs.Main:AddButton({ Title = "Turn Small", Callback = function() U.setSize(1) end })
-
--- FARM
-Tabs.Farm:AddToggle("AR", { Title = "Auto Rebirth", Default = false, Callback = function(v) Config.AutoRebirth = v end })
-Tabs.Farm:AddToggle("AC", { Title = "Auto Chests", Default = false, Callback = function(v) Config.AutoChests = v end })
-Tabs.Farm:AddToggle("AB", { Title = "Auto Brawl", Default = false, Callback = function(v) Config.AutoBrawl = v end })
-Tabs.Farm:AddSection("Crystals")
-for _, n in ipairs({"Blue Crystal","Green Crystal","Mythical Crystal","Frost Crystal","Inferno Crystal","Legends Crystal","Muscle Elite Crystal"}) do
-    Tabs.Farm:AddButton({ Title = n, Callback = function() U.openCrystal(n) end })
-end
-
--- KILL
-Tabs.Kill:AddParagraph({ Title = "Kill System", Content = "Silent Kill = recomendado\nSilent Kill 2 = odiado (Aura)" })
-U.KillLabel = Tabs.Kill:AddParagraph({ Title = "Kill Counter", Content = "Kills: 0" })
-
-Tabs.Kill:AddToggle("SK", {
-    Title = "Silent Kill (Recomendado)",
-    Description = "Só Punch + TP + hop",
-    Default = false,
-    Callback = function(v)
-        Config.SilentKill = v
-        if v then
-            Config.SilentKill2 = false
-            U.currentTarget = nil
-            U.equipPunch()
-            U.setAnim(Config.AnimSpeed)
-            Fluent:Notify({ Title = "Silent Kill", Content = "ON | Só Punch", Duration = 2 })
-        else
-            U.currentTarget = nil
-        end
-    end
-})
-Tabs.Kill:AddToggle("SK2", {
-    Title = "Silent Kill 2 (Odiado)",
-    Description = "Aura + TP + só Punch",
-    Default = false,
-    Callback = function(v)
-        Config.SilentKill2 = v
-        if v then
-            Config.SilentKill = false
-            Config.KillAura = true
-            U.currentTarget = nil
-            U.equipPunch()
-            U.setAnim(Config.AnimSpeed)
-            Fluent:Notify({ Title = "Silent Kill 2", Content = "ON", Duration = 2 })
-        else
-            Config.KillAura = false
-            U.currentTarget = nil
-        end
-    end
-})
-Tabs.Kill:AddToggle("KA", {
-    Title = "Kill Aura", Default = false,
-    Callback = function(v) Config.KillAura = v if v then U.equipPunch() end end
-})
-Tabs.Kill:AddSlider("ASize", {
-    Title = "Aura Size", Default = 12, Min = 5, Max = 40, Rounding = 0,
-    Callback = function(v) Config.AuraSize = v end
-})
-Tabs.Kill:AddToggle("ASH", {
-    Title = "Auto Server Hop", Default = true,
-    Callback = function(v) Config.AutoServerHop = v end
-})
-Tabs.Kill:AddButton({ Title = "Reset Counter", Callback = function() U.killCount = 0 U.updateCounter() end })
-Tabs.Kill:AddButton({ Title = "TP Nearest", Callback = function() local p = U.getNearest() if p then U.tp(p) end end })
-Tabs.Kill:AddButton({ Title = "Force Hop", Callback = function() U.hop() end })
-
--- GLITCH
-Tabs.Glitch:AddParagraph({
-    Title = "Glitch Rocks",
-    Content = "Bate nas pedras SEM estar lá.\nPodes andar e falar. Speed 2x."
-})
-Tabs.Glitch:AddToggle("GlitchRock", {
-    Title = "Auto Hit Rock (Glitch)",
-    Description = "Punch remoto infinito",
-    Default = false,
-    Callback = function(v)
-        Config.GlitchRock = v
-        if v then
-            U.equipPunch()
-            U.setAnim(Config.GlitchSpeed or 2)
-            Fluent:Notify({ Title = "Glitch Rock", Content = "ON | " .. tostring(Config.GlitchRockName), Duration = 3 })
-        else
-            U.setAnim(1)
-        end
-    end
-})
-Tabs.Glitch:AddSlider("GlitchSpd", {
-    Title = "Punch Speed (Glitch)", Default = 2, Min = 1, Max = 4, Rounding = 1,
-    Callback = function(v)
-        Config.GlitchSpeed = v
-        if Config.GlitchRock then U.setAnim(v) end
-    end
-})
-
-local rockOptions = U.ROCK_NAMES or {
-    "Tiny Rock", "Punching Rock", "Large Rock", "Golden Rock",
-    "Frozen Rock", "Mythical Rock", "Eternal Rock", "Legends Rock",
-    "Jungle Rock", "Ancient Jungle Rock", "Muscle King Rock"
-}
-Tabs.Glitch:AddDropdown("RockSelect", {
-    Title = "Pedra",
-    Values = rockOptions,
-    Multi = false,
-    Default = 2,
-    Callback = function(v)
-        local name = type(v) == "table" and (v[1] or v.Value) or v
-        if type(name) == "string" then
-            Config.GlitchRockName = name
-            Fluent:Notify({ Title = "Pedra", Content = name, Duration = 2 })
-        end
-    end
-})
-Tabs.Glitch:AddButton({
-    Title = "TP até à pedra",
-    Callback = function()
-        local rock = U.findRock(Config.GlitchRockName or "Punching Rock")
-        U.refresh()
-        if rock and U.HRP then
-            U.HRP.CFrame = rock.CFrame + Vector3.new(0, 3, 5)
-        else
-            Fluent:Notify({ Title = "Glitch", Content = "Pedra não encontrada", Duration = 3 })
-        end
-    end
-})
-Tabs.Glitch:AddButton({
-    Title = "Scan rocks (console)",
-    Callback = function()
-        local found = {}
-        pcall(function()
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and obj.Name:lower():find("rock") then
-                    table.insert(found, obj.Name)
-                end
-            end
-        end)
-        print("[Userspin45] Rocks:")
-        for _, n in ipairs(found) do print(" - " .. n) end
-        Fluent:Notify({ Title = "Scan", Content = #found .. " rocks (F9)", Duration = 4 })
-    end
-})
-Tabs.Glitch:AddParagraph({
-    Title = "Dica Pet Glitch",
-    Content = "Pet 0 XP → Auto Hit Rock na pedra certa → deixa bater."
-})
-
--- TP
-for _, t in ipairs({
-    { n = "Legends Gym", c = CFrame.new(4298.6, 1121.9, -3898.7) },
-    { n = "Mythical Gym", c = CFrame.new(2386.9, 139.6, 1094.3) },
-    { n = "Frost Gym", c = CFrame.new(-2752.6, 125.8, -386.7) },
-    { n = "Eternal Gym", c = CFrame.new(-6917.8, 182.4, -1336.6) },
-    { n = "Tiny Island", c = CFrame.new(-4.3, 221, 1963.6) },
-    { n = "Brawl 1", c = CFrame.new(985.9, 163.8, -7037.8) },
-    { n = "Brawl 2", c = CFrame.new(4466.8, 335, -8425.7) },
-    { n = "Brawl 3", c = CFrame.new(-1901.9, 251.9, -5899.6) },
-}) do
-    Tabs.TP:AddButton({
-        Title = t.n,
-        Callback = function() U.refresh() if U.HRP then U.HRP.CFrame = t.c end end
     })
 end
 
--- MISC
-Tabs.Misc:AddToggle("AAFK", { Title = "Anti AFK", Default = false, Callback = function(v) Config.AntiAFK = v end })
-Tabs.Misc:AddToggle("AD", { Title = "Anti Die", Default = false, Callback = function(v) Config.AntiDie = v end })
-Tabs.Misc:AddSlider("WS", {
-    Title = "WalkSpeed", Default = 16, Min = 16, Max = 200, Rounding = 0,
-    Callback = function(v) U.refresh() if U.Hum then U.Hum.WalkSpeed = v end end
+-- MAIN
+Tabs.Main:AddParagraph({ Title = "Farm", Content = "Auto Lift / Punch / Strength / Rebirth" })
+addToggle(Tabs.Main, "Auto Lift", "AutoLift", false)
+addToggle(Tabs.Main, "Fast Punch (Punch only)", "FastPunch", false)
+addToggle(Tabs.Main, "Auto Strength (train tools)", "AutoStrength", false)
+addToggle(Tabs.Main, "Auto Rebirth", "AutoRebirth", false)
+addToggle(Tabs.Main, "Auto Chests", "AutoChests", false)
+addToggle(Tabs.Main, "Auto Brawl", "AutoBrawl", false)
+
+-- KILL
+Tabs.Kill:AddParagraph({ Title = "Combat", Content = "Silent Kill recommended | SK2 = aggressive" })
+addToggle(Tabs.Kill, "Silent Kill [Recommended]", "SilentKill", false)
+addToggle(Tabs.Kill, "Silent Kill 2 (Aura hate mode)", "SilentKill2", false)
+addToggle(Tabs.Kill, "Kill Aura", "KillAura", false)
+Tabs.Kill:AddSlider("AuraSize", {
+    Title = "Aura / Hitbox Size",
+    Description = "Silent Kill 2 / Kill Aura range",
+    Default = 15, Min = 5, Max = 50, Rounding = 0,
+    Callback = function(v) ML.Settings.AuraSize = v end
 })
-Tabs.Misc:AddButton({ Title = "Full Health", Callback = function() U.refresh() if U.Hum then U.Hum.Health = U.Hum.MaxHealth end end })
-Tabs.Misc:AddButton({ Title = "Rejoin", Callback = function() game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer) end })
-Tabs.Misc:AddSection("Delta AutoExecute")
-Tabs.Misc:AddToggle("AutoExec", {
-    Title = "Auto Execute (Delta)",
-    Description = "ON = grava | OFF = remove",
-    Default = false,
+
+-- GLITCH
+Tabs.Glitch:AddParagraph({
+    Title = "Glitch Rocks [BETA]",
+    Content = "Hit rocks from anywhere • 2x speed • walk/talk free"
+})
+addToggle(Tabs.Glitch, "Glitch Rocks [BETA]", "GlitchRocks", false)
+Tabs.Glitch:AddSlider("GlitchSpeed", {
+    Title = "Glitch Punch Speed",
+    Default = 2, Min = 1, Max = 5, Rounding = 1,
+    Callback = function(v) ML.Settings.GlitchSpeed = v end
+})
+Tabs.Glitch:AddParagraph({ Title = "Warning", Content = "GLITCH IS IN BETA — may break after updates" })
+
+-- MISC
+Tabs.Misc:AddParagraph({ Title = "Quality of life", Content = "Anti AFK / Die / Speed / Counter" })
+addToggle(Tabs.Misc, "Anti AFK", "AntiAFK", false)
+addToggle(Tabs.Misc, "Anti Die", "AntiDie", false)
+addToggle(Tabs.Misc, "Kill Counter UI", "KillCounter", false)
+addToggle(Tabs.Misc, "Auto Execute (Delta) — weak", "AutoExecute", false)
+Tabs.Misc:AddSlider("WalkSpeed", {
+    Title = "WalkSpeed", Default = 16, Min = 16, Max = 120, Rounding = 0,
     Callback = function(v)
-        Config.AutoExecute = v
-        if U.setAutoExecute then U.setAutoExecute(v) end
+        ML.Settings.WalkSpeed = v
+        local h = ML.getHum()
+        if h then pcall(function() h.WalkSpeed = v end) end
     end
 })
 Tabs.Misc:AddParagraph({
-    Title = "Info",
-    Content = "Auto Execute ON → depois do hop o Delta tenta carregar sozinho."
+    Title = "Warning",
+    Content = "AUTO EXECUTE DOES NOT WORK WELL on all Delta builds"
 })
+
+-- TPs
+local function tpTo(cf)
+    local hrp = ML.getHRP()
+    if hrp then hrp.CFrame = cf end
+end
+Tabs.TPs:AddButton({ Title = "Mythical Gym", Callback = function() tpTo(CFrame.new(2386.89, 139.61, 1094.26)) end })
+Tabs.TPs:AddButton({ Title = "Frost Gym", Callback = function() tpTo(CFrame.new(-2752.57, 125.82, -386.74)) end })
+Tabs.TPs:AddButton({ Title = "Eternal Gym", Callback = function() tpTo(CFrame.new(-6917.79, 182.35, -1336.64)) end })
+Tabs.TPs:AddButton({ Title = "Tiny Island", Callback = function() tpTo(CFrame.new(-4.25, 220.99, 1963.60)) end })
+Tabs.TPs:AddButton({ Title = "Brawl Aura 1", Callback = function() tpTo(CFrame.new(985.91, 163.80, -7037.81)) end })
+Tabs.TPs:AddButton({ Title = "Brawl Aura 2", Callback = function() tpTo(CFrame.new(4466.75, 334.97, -8425.75)) end })
+Tabs.TPs:AddButton({ Title = "Brawl Aura 3", Callback = function() tpTo(CFrame.new(-1901.88, 251.90, -5899.65)) end })
 
 -- CREDITS
 Tabs.Credits:AddParagraph({
-    Title = "Creator",
-    Content = "👑 Userspin45\nMEGA FINAL + Glitch Rocks\nSilent Kill só Punch"
+    Title = "ML Script",
+    Content = "Creator: Userspin45\nMuscle Legends MEGA FINAL\nSilent Kill • Glitch • Farm"
 })
-Tabs.Credits:AddButton({
-    Title = "Copiar Credits",
-    Callback = function() setclipboard("Creator: Userspin45 | ML MEGA FINAL") end
+Tabs.Credits:AddParagraph({
+    Title = "Warnings",
+    Content = "• AUTO EXECUTE DOESNT WORK WELL\n• GLITCH ROCKS IS IN BETA\n• Punch tools only on Fast Punch / Silent Kill"
+})
+Tabs.Credits:AddParagraph({
+    Title = "Links",
+    Content = "GitHub: afonsomiguelito13-collab/ML-Script\nScriptBlox: search ML Script"
 })
 
-print("[Userspin45] parte2 OK")
+Window:SelectTab(1)
+
+-- TOGGLE BUTTON (só Fluent)
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local toggleGui = Instance.new("ScreenGui")
+toggleGui.Name = "ML_Script_Toggle"
+toggleGui.ResetOnSpawn = false
+toggleGui.IgnoreGuiInset = true
+toggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+toggleGui.DisplayOrder = 999
+toggleGui.Parent = playerGui
+
+local btn = Instance.new("TextButton")
+btn.Name = "ToggleBtn"
+btn.Size = UDim2.fromOffset(54, 54)
+btn.Position = UDim2.new(0, 14, 0.45, 0)
+btn.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
+btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 15
+btn.Text = "ML"
+btn.AutoButtonColor = true
+btn.Parent = toggleGui
+
+Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(90, 90, 110)
+stroke.Thickness = 1.2
+stroke.Parent = btn
+
+local dragging, dragStart, startPos
+btn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = btn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+local uiOpen = true
+local function setFluentVisible(vis)
+    pcall(function() if Window.Root then Window.Root.Visible = vis end end)
+    pcall(function() if Window.UI then Window.UI.Visible = vis end end)
+    for _, gui in ipairs(playerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui ~= toggleGui then
+            local n = string.lower(gui.Name)
+            if n:find("fluent") or n:find("window") or n:find("ml script") then
+                gui.Visible = vis
+            end
+        end
+    end
+end
+
+btn.MouseButton1Click:Connect(function()
+    uiOpen = not uiOpen
+    setFluentVisible(uiOpen)
+    btn.Text = uiOpen and "ML" or "OPEN"
+    btn.BackgroundColor3 = uiOpen and Color3.fromRGB(28, 28, 34) or Color3.fromRGB(35, 110, 65)
+end)
+
+print("[ML] parte2 UI + toggle button ready ✅")
