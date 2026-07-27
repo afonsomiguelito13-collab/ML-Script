@@ -1,5 +1,6 @@
 -- ML Script | parte3.lua
--- Loops: farm, kill, auto rock (far), misc (Userspin45)
+-- Loops: farm, kill, Auto Rock (hub method), reconnect (Userspin45)
+-- Auto Rock: machinesFolder + neededDurability + firetouchinterest(hands)
 print("[ML] parte3 loops OK")
 
 local ML = getgenv().ML
@@ -10,6 +11,9 @@ end
 
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
+local TeleportService = game:GetService("TeleportService")
+local GuiService = game:GetService("GuiService")
+local Workspace = game:GetService("Workspace")
 local LP = ML.LP
 
 local kills = 0
@@ -85,10 +89,15 @@ local function nearestPlayer(maxDist)
     return best, bestD
 end
 
--- FARM
+-- ===== FARM =====
 task.spawn(function()
     while true do
-        if ML.Flags.AutoLift or ML.Flags.AutoStrength then
+        if ML.Flags.AutoLift or ML.Flags.AutoWeight then
+            ML.equipWeight()
+            ML.fireRep()
+            activateTool()
+        end
+        if ML.Flags.AutoStrength then
             ML.equipTrain()
             ML.fireRep()
             activateTool()
@@ -104,12 +113,14 @@ end)
 
 task.spawn(function()
     while true do
-        if ML.Flags.AutoRebirth then ML.fireRebirth() end
+        if ML.Flags.AutoRebirth then
+            ML.fireRebirth()
+        end
         task.wait(0.35)
     end
 end)
 
--- SILENT KILL
+-- ===== SILENT KILL =====
 task.spawn(function()
     while true do
         if ML.Flags.SilentKill then
@@ -133,7 +144,7 @@ task.spawn(function()
     end
 end)
 
--- SILENT KILL 2 / AURA
+-- ===== SILENT KILL 2 / AURA =====
 task.spawn(function()
     while true do
         local auraOn = ML.Flags.SilentKill2 or ML.Flags.KillAura
@@ -152,6 +163,21 @@ task.spawn(function()
                                 if ML.Flags.SilentKill2 then
                                     hrp.CFrame = ohrp.CFrame * CFrame.new(0, 0, 2.5)
                                 end
+                                local char = LP.Character
+                                if char and firetouchinterest then
+                                    local lh = char:FindFirstChild("LeftHand")
+                                    local rh = char:FindFirstChild("RightHand")
+                                    pcall(function()
+                                        if lh then
+                                            firetouchinterest(ohrp, lh, 0)
+                                            firetouchinterest(ohrp, lh, 1)
+                                        end
+                                        if rh then
+                                            firetouchinterest(ohrp, rh, 0)
+                                            firetouchinterest(ohrp, rh, 1)
+                                        end
+                                    end)
+                                end
                                 activateTool()
                                 ML.fireRep()
                                 if hum.Health <= 0 then addKill() end
@@ -167,74 +193,140 @@ task.spawn(function()
     end
 end)
 
--- AUTO ROCK FAR (hub method)
-local function findRocks()
-    local list, seen = {}, {}
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and not seen[v] then
-            local n = string.lower(v.Name)
-            for _, rn in ipairs(ML.RockNames) do
-                if string.find(n, string.lower(rn), 1, true) then
-                    seen[v] = true
-                    table.insert(list, v)
-                    break
-                end
-            end
-        end
-    end
-    return list
+-- ============================================================
+-- AUTO ROCK [HUB METHOD]
+-- machinesFolder → neededDurability → Rock
+-- firetouchinterest(Rock, LeftHand/RightHand, 0/1)
+-- Punch + Activate + rep  |  works from FAR
+-- ============================================================
+
+local function getHands()
+    local char = LP.Character
+    if not char then return nil, nil end
+    return char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm"),
+           char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
 end
 
-local function touchRock(hrp, rock)
-    if not hrp or not rock then return end
+local function touchRockHub(rock)
+    if not rock or not rock.Parent then return end
+    local lh, rh = getHands()
+    local hrp = ML.getHRP()
+    if not firetouchinterest then return end
+
     pcall(function()
-        if firetouchinterest then
+        if rh then
+            firetouchinterest(rock, rh, 0)
+            firetouchinterest(rock, rh, 1)
+        end
+        if lh then
+            firetouchinterest(rock, lh, 0)
+            firetouchinterest(rock, lh, 1)
+        end
+        if rh then
+            firetouchinterest(rh, rock, 0)
+            firetouchinterest(rh, rock, 1)
+        end
+        if lh then
+            firetouchinterest(lh, rock, 0)
+            firetouchinterest(lh, rock, 1)
+        end
+        if hrp then
             firetouchinterest(hrp, rock, 0)
             firetouchinterest(hrp, rock, 1)
             firetouchinterest(rock, hrp, 0)
             firetouchinterest(rock, hrp, 1)
         end
     end)
-    local char = ML.LP.Character
-    if char and firetouchinterest then
-        for _, limbName in ipairs({ "LeftHand", "RightHand", "LeftFoot", "RightFoot", "Head" }) do
-            local limb = char:FindFirstChild(limbName)
-            if limb then
-                pcall(function()
-                    firetouchinterest(limb, rock, 0)
-                    firetouchinterest(limb, rock, 1)
-                end)
+end
+
+-- Scan A: machinesFolder (melhor / hubs)
+local function findRocksMachines()
+    local list, names = {}, {}
+    local folder = Workspace:FindFirstChild("machinesFolder")
+    if not folder then return list, names end
+
+    for _, v in ipairs(folder:GetDescendants()) do
+        if v.Name == "neededDurability" and (v:IsA("IntValue") or v:IsA("NumberValue") or v:IsA("DoubleConstrainedValue")) then
+            local parent = v.Parent
+            if parent then
+                local rock = parent:FindFirstChild("Rock") or parent:FindFirstChildWhichIsA("BasePart")
+                if rock and rock:IsA("BasePart") then
+                    table.insert(list, rock)
+                    local label = parent.Name
+                    if v.Value then
+                        label = label .. " [dura " .. tostring(v.Value) .. "]"
+                    end
+                    table.insert(names, label)
+                end
             end
         end
     end
+    return list, names
+end
+
+-- Scan B: nomes (fallback)
+local function findRocksByName()
+    local list, names, seen = {}, {}, {}
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not seen[v] then
+            local n = string.lower(v.Name)
+            for _, rn in ipairs(ML.RockNames or {}) do
+                if string.find(n, string.lower(rn), 1, true) then
+                    seen[v] = true
+                    table.insert(list, v)
+                    table.insert(names, v.Name)
+                    break
+                end
+            end
+        end
+    end
+    return list, names
+end
+
+local function findRocks()
+    local list, names = findRocksMachines()
+    if #list == 0 then
+        list, names = findRocksByName()
+    end
+    ML.FoundRocks = list
+    ML.FoundRockNames = names
+    return list
 end
 
 task.spawn(function()
     local rocks, lastScan = {}, 0
     while true do
         if ML.Flags.GlitchRocks then
-            if tick() - lastScan > 6 or #rocks == 0 then
+            if tick() - lastScan > 5 or #rocks == 0 then
                 rocks = findRocks()
                 lastScan = tick()
+                print("[ML] Auto Rock scan: " .. tostring(#rocks) .. " rock(s)")
+                if #ML.FoundRockNames > 0 then
+                    local show = table.concat(ML.FoundRockNames, " | ")
+                    if #show > 160 then show = string.sub(show, 1, 160) .. "..." end
+                    print("[ML] Rocks: " .. show)
+                end
             end
+
             ML.equipPunch()
-            local hrp = ML.getHRP()
+
             for _, rock in ipairs(rocks) do
                 if rock and rock.Parent then
-                    touchRock(hrp, rock)
+                    touchRockHub(rock)
                     activateTool()
                     ML.fireRep()
                 end
             end
+
             local spd = tonumber(ML.Settings.GlitchSpeed) or 2
-            task.wait(math.max(0.04, 0.18 / spd))
+            task.wait(math.max(0.03, 0.15 / spd))
         else
             task.wait(0.4)
         end
     end
 end)
 
--- ANTI AFK
+-- ===== ANTI AFK =====
 task.spawn(function()
     while true do
         if ML.Flags.AntiAFK then
@@ -255,7 +347,7 @@ LP.Idled:Connect(function()
     end
 end)
 
--- ANTI DIE
+-- ===== ANTI DIE =====
 task.spawn(function()
     while true do
         if ML.Flags.AntiDie then
@@ -265,6 +357,57 @@ task.spawn(function()
             end
         end
         task.wait(0.5)
+    end
+end)
+
+-- ===== AUTO RECONNECT =====
+local reconnecting = false
+local function tryReconnect(reason)
+    if not ML.Flags.AutoReconnect then return end
+    if reconnecting then return end
+    reconnecting = true
+    print("[ML] Auto Reconnect:", reason or "kick/error")
+    task.spawn(function()
+        task.wait(1.5)
+        pcall(function()
+            TeleportService:Teleport(game.PlaceId, LP)
+        end)
+        task.wait(8)
+        reconnecting = false
+    end)
+end
+
+pcall(function()
+    GuiService.ErrorMessageChanged:Connect(function(msg)
+        if msg and #tostring(msg) > 0 then
+            tryReconnect(tostring(msg))
+        end
+    end)
+end)
+
+task.spawn(function()
+    while true do
+        if ML.Flags.AutoReconnect then
+            pcall(function()
+                local pg = game:GetService("CoreGui")
+                local prompt = pg:FindFirstChild("RobloxPromptGui")
+                if prompt then
+                    local overlay = prompt:FindFirstChild("promptOverlay")
+                    if overlay then
+                        for _, d in ipairs(overlay:GetDescendants()) do
+                            if d:IsA("TextLabel") then
+                                local t = string.lower(d.Text or "")
+                                if t:find("reconnect") or t:find("disconnected") or t:find("kick") or t:find("error") then
+                                    tryReconnect(d.Text)
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(3)
     end
 end)
 
@@ -285,5 +428,5 @@ task.spawn(function()
     end
 end)
 
-print("[ML] parte3 OK | Auto Rock far | tool:Activate only")
-print("[ML] Userspin45 | " .. (ML.Version or "?"))
+print("[ML] parte3 OK | Auto Rock = machinesFolder + firetouchinterest hands (hub method)")
+print("[ML] Weight=Weight | Punch=Punch | AutoReconnect | Userspin45 | " .. (ML.Version or "?"))
